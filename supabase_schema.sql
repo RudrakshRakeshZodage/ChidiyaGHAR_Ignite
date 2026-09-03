@@ -1,5 +1,5 @@
 -- =========================================================================
--- CODE MAFIA: SUPABASE DATABASE INITIALIZATION SCHEMA
+-- CODE MAFIA: SUPABASE DATABASE INITIALIZATION SCHEMA (IDEMPOTENT & SAFE)
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/msgjuazmayoimjjaatmh/sql
 -- =========================================================================
 
@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS public.game_matches (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Create Leaderboard Table / View
+-- 3. Create Leaderboard Table
 CREATE TABLE IF NOT EXISTS public.leaderboard (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
     avatar TEXT DEFAULT '👨‍💻',
     wins INTEGER DEFAULT 0,
     games_played INTEGER DEFAULT 0,
@@ -40,28 +40,36 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.game_matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leaderboard ENABLE ROW LEVEL SECURITY;
 
--- 5. Set RLS Policies (Allow public reads, allow authenticated inserts/updates)
+-- 5. Set RLS Policies (Drops if exists to avoid 42710 error, then creates)
+
 -- Profiles policies
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone." 
 ON public.profiles FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
 CREATE POLICY "Users can insert their own profile." 
 ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile." ON public.profiles;
 CREATE POLICY "Users can update their own profile." 
 ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- Game matches policies
+DROP POLICY IF EXISTS "Allow anyone to read game match records." ON public.game_matches;
 CREATE POLICY "Allow anyone to read game match records." 
 ON public.game_matches FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow anyone or server to insert game matches." ON public.game_matches;
 CREATE POLICY "Allow anyone or server to insert game matches." 
 ON public.game_matches FOR INSERT WITH CHECK (true);
 
 -- Leaderboard policies
+DROP POLICY IF EXISTS "Allow anyone to read leaderboard." ON public.leaderboard;
 CREATE POLICY "Allow anyone to read leaderboard." 
 ON public.leaderboard FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow anyone or server to insert/update leaderboard." ON public.leaderboard;
 CREATE POLICY "Allow anyone or server to insert/update leaderboard." 
 ON public.leaderboard FOR ALL USING (true);
 
@@ -75,7 +83,10 @@ BEGIN
     COALESCE(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
     COALESCE(new.raw_user_meta_data->>'avatar', '👨‍💻')
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    username = EXCLUDED.username,
+    avatar = EXCLUDED.avatar,
+    updated_at = timezone('utc'::text, now());
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
