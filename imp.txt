@@ -1,0 +1,6 @@
+# Run both Frontend and Backend concurrently
+npm run dev
+
+# Or run separately:
+npm run dev:frontend
+npm run dev:backend
