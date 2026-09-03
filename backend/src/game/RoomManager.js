@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { assignRoles } from "./RoleAssigner.js";
 import { CHALLENGES, getChallengeById } from "./challenges.js";
 import { runChallengeTests } from "./TestEngine.js";
+import { generateFallbackRiddles } from "../services/aiRiddleService.js";
 
 export const GAME_STATES = {
   LOBBY: "LOBBY",
@@ -54,12 +55,19 @@ export class RoomManager {
           timestamp: Date.now()
         }
       ],
+      chatMessages: [],
+      _lastEditTimes: new Map(),
       testResults: null,
       meeting: null, // active emergency meeting info
       winner: null,
       winReason: null,
       timer: null,
-      timeRemainingSeconds: 600
+      timeRemainingSeconds: 600,
+      phase: "CODING", // "CODING" (30s) | "FREEZE" (15s)
+      phaseTimeRemaining: 30,
+      snapshotBeforeCode: defaultChallenge.starterCode,
+      mysteryRiddles: [],
+      unlockedClueIndices: []
     };
 
     // Add host player
@@ -89,7 +97,7 @@ export class RoomManager {
     const room = this.getRoom(roomCode);
     if (!room) return { error: "Room not found" };
     if (room.status !== GAME_STATES.LOBBY) return { error: "Game already in progress" };
-    if (room.players.size >= 8) return { error: "Room is full (max 8 players)" };
+    if (room.players.size >= 8) return { error: "Room is full (maximum 8 players allowed)" };
 
     const newPlayer = {
       id: player.id || uuidv4(),
@@ -149,6 +157,9 @@ export class RoomManager {
     const room = this.getRoom(roomCode);
     if (!room) return { error: "Room not found" };
     if (room.hostId !== hostId) return { error: "Only the host can start the game" };
+    if (room.players.size < 2) {
+      return { error: "At least 2 players are required to start the mission (Min: 2, Max: 8)" };
+    }
 
     // Select challenge
     const challenge = getChallengeById(room.settings.challengeId);
@@ -165,6 +176,22 @@ export class RoomManager {
 
     room.status = GAME_STATES.ROLE_REVEAL;
     room.timeRemainingSeconds = room.settings.durationMinutes * 60;
+    room.phase = "CODING";
+    room.phaseTimeRemaining = 30;
+    room.snapshotBeforeCode = challenge.starterCode;
+    room.unlockedClueIndices = [];
+
+    // Pre-generate baseline riddles for the secret Mafia player
+    const mafiaPlayer = assigned.find(p => p.role === "MAFIA");
+    if (mafiaPlayer) {
+      room.mysteryRiddles = generateFallbackRiddles(
+        mafiaPlayer.name,
+        mafiaPlayer.avatar,
+        challenge.testSuite.length
+      );
+    } else {
+      room.mysteryRiddles = [];
+    }
     
     room.activityLog.push({
       id: uuidv4(),
@@ -179,16 +206,26 @@ export class RoomManager {
   updateCode(roomCode, playerId, newCode) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
+    if (room.phase === "FREEZE") return null; // Prevent code edits during 15s freeze
     const player = room.players.get(playerId);
 
     room.currentCode = newCode;
-    room.activityLog.push({
-      id: uuidv4(),
-      type: "CODE_EDIT",
-      playerName: player ? player.name : "Anonymous",
-      text: `${player ? player.name : "A player"} updated the codebase`,
-      timestamp: Date.now()
-    });
+
+    // Throttle activity log entry for code editing (at most once every 3.5s per player)
+    const now = Date.now();
+    const lastEdit = room._lastEditTimes?.get(playerId) || 0;
+    if (now - lastEdit > 3500) {
+      if (!room._lastEditTimes) room._lastEditTimes = new Map();
+      room._lastEditTimes.set(playerId, now);
+      room.activityLog.push({
+        id: uuidv4(),
+        type: "CODE_EDIT",
+        playerId: player ? player.id : null,
+        playerName: player ? player.name : "Anonymous",
+        text: `${player ? player.name : "A player"} modified the codebase`,
+        timestamp: now
+      });
+    }
 
     return room;
   }
@@ -200,6 +237,27 @@ export class RoomManager {
 
     const testResults = runChallengeTests(room.currentCode, room.challenge.testSuite);
     room.testResults = testResults;
+
+    // Track newly unlocked Mystery Box clues for passed test cases
+    const newlyUnlockedClues = [];
+    if (testResults && testResults.tests) {
+      if (!room.unlockedClueIndices) room.unlockedClueIndices = [];
+      testResults.tests.forEach((t, idx) => {
+        if (t.passed && !room.unlockedClueIndices.includes(idx)) {
+          room.unlockedClueIndices.push(idx);
+          const clue = room.mysteryRiddles?.[idx];
+          if (clue) {
+            newlyUnlockedClues.push(clue);
+            room.activityLog.push({
+              id: uuidv4(),
+              type: "MYSTERY_UNLOCKED",
+              text: `🎁 MYSTERY BOX UNLOCKED! Test #${idx + 1} passed: A clue about the Mafia's identity was discovered!`,
+              timestamp: Date.now()
+            });
+          }
+        }
+      });
+    }
 
     room.activityLog.push({
       id: uuidv4(),
@@ -218,7 +276,7 @@ export class RoomManager {
       if (room.timer) clearInterval(room.timer);
     }
 
-    return { room, testResults };
+    return { room, testResults, newlyUnlockedClues };
   }
 
   callEmergencyMeeting(roomCode, callerId) {
@@ -358,6 +416,7 @@ export class RoomManager {
   sanitizeRoomForPlayer(room, playerId) {
     if (!room) return null;
     const isGameOver = room.status === GAME_STATES.GAME_OVER;
+    const selfPlayer = room.players.get(playerId);
 
     const playersObj = {};
     for (const [id, player] of room.players.entries()) {
@@ -395,11 +454,20 @@ export class RoomManager {
       currentCode: room.currentCode,
       players: playersObj,
       activityLog: room.activityLog.slice(-50),
+      chatMessages: (room.chatMessages || []).slice(-100),
       testResults: room.testResults,
       meeting: room.meeting,
       winner: room.winner,
       winReason: room.winReason,
-      timeRemainingSeconds: room.timeRemainingSeconds
+      timeRemainingSeconds: room.timeRemainingSeconds,
+      phase: room.phase || "CODING",
+      phaseTimeRemaining: room.phaseTimeRemaining || 30,
+      snapshotBeforeCode: (selfPlayer?.role === "MAFIA" || isGameOver) ? (room.snapshotBeforeCode || room.challenge?.starterCode) : null,
+      unlockedMysteryClues: (selfPlayer?.role === "DEVELOPER" || isGameOver)
+        ? (room.mysteryRiddles || []).filter((_, idx) => (room.unlockedClueIndices || []).includes(idx))
+        : [],
+      totalMysteryCluesCount: room.mysteryRiddles?.length || (room.challenge?.testSuite?.length || 5),
+      mafiaCluesUnlockedCount: (room.unlockedClueIndices || []).length
     };
   }
 }

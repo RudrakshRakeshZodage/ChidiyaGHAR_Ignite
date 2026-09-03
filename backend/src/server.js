@@ -3,10 +3,12 @@ import http from "node:http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
+import { v4 as uuidv4 } from "uuid";
 import { RoomManager, GAME_STATES } from "./game/RoomManager.js";
 import { createApiRouter } from "./routes/api.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { recordGameResult } from "./db/supabase.js";
+import { generateAiRiddlesForMafia } from "./services/aiRiddleService.js";
 
 dotenv.config();
 
@@ -62,6 +64,55 @@ function startGameTicker(roomCode) {
 
     if (room.status === GAME_STATES.PLAYING) {
       room.timeRemainingSeconds -= 1;
+
+      // 30s Active Coding / 15s Code Freeze Cycle
+      if (!room.phase) room.phase = "CODING";
+      if (room.phaseTimeRemaining === undefined) room.phaseTimeRemaining = 30;
+
+      room.phaseTimeRemaining -= 1;
+
+      if (room.phase === "CODING" && room.phaseTimeRemaining <= 0) {
+        // Transition to 15s Code Freeze
+        room.phase = "FREEZE";
+        room.phaseTimeRemaining = 15;
+        room.activityLog.push({
+          id: uuidv4(),
+          type: "PHASE_CHANGE",
+          text: "❄️ CODE FREEZE ACTIVATED (15s): Code editing locked for team inspection & testing!",
+          timestamp: Date.now()
+        });
+        io.to(roomCode).emit("game:phase_change", {
+          phase: "FREEZE",
+          phaseTimeRemaining: 15,
+          currentCode: room.currentCode,
+          snapshotBeforeCode: room.snapshotBeforeCode
+        });
+        broadcastRoomState(room);
+      } else if (room.phase === "FREEZE" && room.phaseTimeRemaining <= 0) {
+        // Transition to 30s Active Coding Sprint
+        room.phase = "CODING";
+        room.phaseTimeRemaining = 30;
+        room.snapshotBeforeCode = room.currentCode; // Set new baseline snapshot for the upcoming cycle
+        room.activityLog.push({
+          id: uuidv4(),
+          type: "PHASE_CHANGE",
+          text: "⚡ ACTIVE CODING SPRINT (30s): Code editing unlocked for all developers & mafia!",
+          timestamp: Date.now()
+        });
+        io.to(roomCode).emit("game:phase_change", {
+          phase: "CODING",
+          phaseTimeRemaining: 30,
+          currentCode: room.currentCode,
+          snapshotBeforeCode: room.snapshotBeforeCode
+        });
+        broadcastRoomState(room);
+      } else {
+        // Periodic sync of phase ticker
+        io.to(roomCode).emit("game:phase_tick", {
+          phase: room.phase,
+          phaseTimeRemaining: room.phaseTimeRemaining
+        });
+      }
 
       // Time expired -> Mafia victory
       if (room.timeRemainingSeconds <= 0) {
@@ -151,6 +202,20 @@ io.on("connection", (socket) => {
     broadcastRoomState(res.room);
     startGameTicker(currentRoomCode);
     callback?.({ success: true });
+
+    // Asynchronously generate AI-enhanced riddles with AIHubMix
+    const mafiaPlayer = Array.from(res.room.players.values()).find(p => p.role === "MAFIA");
+    if (mafiaPlayer) {
+      generateAiRiddlesForMafia(mafiaPlayer.name, mafiaPlayer.avatar, res.room.challenge.testSuite.length)
+        .then(aiRiddles => {
+          const r = roomManager.getRoom(currentRoomCode);
+          if (r && aiRiddles && aiRiddles.length > 0) {
+            r.mysteryRiddles = aiRiddles;
+            broadcastRoomState(r);
+          }
+        })
+        .catch(err => console.warn("[AI] Riddle generation background error:", err.message));
+    }
   });
 
   // 5. Role Revealed (Transition to Playing)
@@ -165,14 +230,30 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 6. Collaborative Code Update
+  // 6. Collaborative Code Update (Instant Sync across all players)
   socket.on("code:change", ({ code }) => {
     if (!currentRoomCode || !currentPlayerId) return;
     const room = roomManager.updateCode(currentRoomCode, currentPlayerId, code);
     if (room) {
+      const sender = room.players.get(currentPlayerId);
       socket.to(currentRoomCode).emit("code:sync", {
         code: room.currentCode,
-        updatedBy: currentPlayerId
+        updatedBy: currentPlayerId,
+        updatedByName: sender?.name || "Team Member"
+      });
+    }
+  });
+
+  // 6b. Live Typing Presence
+  socket.on("code:typing", () => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room) return;
+    const sender = room.players.get(currentPlayerId);
+    if (sender) {
+      socket.to(currentRoomCode).emit("code:player_typing", {
+        playerId: sender.id,
+        playerName: sender.name
       });
     }
   });
@@ -188,6 +269,15 @@ io.on("connection", (socket) => {
       testResults: res.testResults,
       runBy: currentPlayerId
     });
+
+    // Broadcast newly unlocked Mystery Box clues if any test was solved
+    if (res.newlyUnlockedClues && res.newlyUnlockedClues.length > 0) {
+      io.to(currentRoomCode).emit("mystery:clue_unlocked", {
+        newlyUnlocked: res.newlyUnlockedClues,
+        unlockedCount: res.room.unlockedClueIndices.length
+      });
+    }
+
     broadcastRoomState(res.room);
   });
 
@@ -240,26 +330,94 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 10. In-Game Chat Message
+  // 10. In-Game & Meeting Chat Message
   socket.on("chat:send", ({ message }) => {
-    if (!currentRoomCode || !currentPlayerId) return;
+    if (!currentRoomCode || !currentPlayerId || !message?.trim()) return;
     const room = roomManager.getRoom(currentRoomCode);
     if (!room) return;
 
     const sender = room.players.get(currentPlayerId);
     if (!sender) return;
 
-    io.to(currentRoomCode).emit("chat:message", {
-      id: Date.now().toString(),
+    const chatMsg = {
+      id: "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
       senderId: sender.id,
       senderName: sender.name,
       senderAvatar: sender.avatar,
-      message,
+      isAlive: sender.isAlive,
+      message: message.trim(),
       timestamp: Date.now()
+    };
+
+    if (!room.chatMessages) room.chatMessages = [];
+    room.chatMessages.push(chatMsg);
+    if (room.chatMessages.length > 100) room.chatMessages.shift();
+
+    io.to(currentRoomCode).emit("chat:message", chatMsg);
+  });
+
+  // 11. Real-time Low-Latency Voice Chat Signaling & Audio Relay
+  socket.on("voice:join_room", () => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    socket.to(currentRoomCode).emit("voice:user_joined", { playerId: currentPlayerId });
+  });
+
+  socket.on("voice:state_change", ({ isMuted, isSpeaking }) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    socket.to(currentRoomCode).emit("voice:peer_state", {
+      playerId: currentPlayerId,
+      isMuted,
+      isSpeaking
     });
   });
 
-  // 11. Disconnect
+  // WebRTC P2P Mesh Signaling
+  socket.on("voice:webrtc_offer", ({ targetId, offer }) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    const target = room?.players.get(targetId);
+    if (target?.socketId) {
+      io.to(target.socketId).emit("voice:webrtc_offer", {
+        senderId: currentPlayerId,
+        offer
+      });
+    }
+  });
+
+  socket.on("voice:webrtc_answer", ({ targetId, answer }) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    const target = room?.players.get(targetId);
+    if (target?.socketId) {
+      io.to(target.socketId).emit("voice:webrtc_answer", {
+        senderId: currentPlayerId,
+        answer
+      });
+    }
+  });
+
+  socket.on("voice:webrtc_ice", ({ targetId, candidate }) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const room = roomManager.getRoom(currentRoomCode);
+    const target = room?.players.get(targetId);
+    if (target?.socketId) {
+      io.to(target.socketId).emit("voice:webrtc_ice", {
+        senderId: currentPlayerId,
+        candidate
+      });
+    }
+  });
+
+  // Low-latency binary PCM audio buffer broadcast fallback
+  socket.on("voice:audio_chunk", (audioData) => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    socket.to(currentRoomCode).emit("voice:audio_chunk", {
+      senderId: currentPlayerId,
+      audioData
+    });
+  });
+
+  // 12. Disconnect
   socket.on("disconnect", () => {
     if (currentRoomCode && currentPlayerId) {
       const room = roomManager.leaveRoom(currentRoomCode, currentPlayerId);

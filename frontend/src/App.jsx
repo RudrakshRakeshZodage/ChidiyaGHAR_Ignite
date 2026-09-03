@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { socketService } from './services/socket';
+import { voiceService } from './services/voiceService';
 import { CHALLENGES } from './data/challenges';
 import { getStoredUser, logoutUser } from './services/auth';
 
@@ -10,22 +11,78 @@ import RoleModal from './components/RoleModal';
 import CodeEditor from './components/CodeEditor';
 import TestRunner from './components/TestRunner';
 import ActivityFeed from './components/ActivityFeed';
+import EvidenceBoard from './components/EvidenceBoard';
+import MysteryCluesDossier from './components/MysteryCluesDossier';
+import MysteryBoxModal from './components/MysteryBoxModal';
+import LeaderboardModal from './components/LeaderboardModal';
+import ChatBox from './components/ChatBox';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
 import AuthModal from './components/AuthModal';
-import { Bug, Sparkles, AlertCircle, FileCode } from 'lucide-react';
+import { Bug, Sparkles, AlertCircle, FileCode, ShieldCheck, Activity, Search, MessageSquare, Gift, Trophy } from 'lucide-react';
 
 export default function App() {
   const [authUser, setAuthUser] = useState(getStoredUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   const [player, setPlayer] = useState(null);
   const [room, setRoom] = useState(null);
   const [code, setCode] = useState("");
   const [testResults, setTestResults] = useState(null);
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState(600);
+  const [phase, setPhase] = useState("CODING");
+  const [phaseTimeRemaining, setPhaseTimeRemaining] = useState(30);
+  const [snapshotBeforeCode, setSnapshotBeforeCode] = useState("");
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+  // Real-time Voice Chat State
+  const [isVoiceMuted, setIsVoiceMuted] = useState(true);
+  const [isVoiceSpeaking, setIsVoiceSpeaking] = useState(false);
+  const [activeSpeakers, setActiveSpeakers] = useState([]);
+  const speakerTimersRef = useRef(new Map());
+
+  // Mystery Box & Riddle State
+  const [unlockedMysteryClues, setUnlockedMysteryClues] = useState([]);
+  const [totalMysteryCluesCount, setTotalMysteryCluesCount] = useState(5);
+  const [mafiaCluesUnlockedCount, setMafiaCluesUnlockedCount] = useState(0);
+  const [activeMysteryModalClue, setActiveMysteryModalClue] = useState(null);
+
+  // Arena Right Panel Tab: 'tests' | 'mystery' | 'activity' | 'evidence' | 'chat'
+  const [activeTab, setActiveTab] = useState('tests');
+  const [messages, setMessages] = useState([]);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [activeTypers, setActiveTypers] = useState([]);
+  const typerTimeoutRef = useRef(null);
+  const lastTypingEmitRef = useRef(0);
+
+  // Voice Service Event Listeners
+  useEffect(() => {
+    const handleMuteChange = (muted) => {
+      setIsVoiceMuted(muted);
+      const socket = socketService.getSocket();
+      if (socket && socket.connected) {
+        socket.emit("voice:state_change", { isMuted: muted, isSpeaking: !muted && isVoiceSpeaking });
+      }
+    };
+
+    const handleSpeakingChange = (speaking) => {
+      setIsVoiceSpeaking(speaking);
+      const socket = socketService.getSocket();
+      if (socket && socket.connected) {
+        socket.emit("voice:state_change", { isMuted: isVoiceMuted, isSpeaking: speaking });
+      }
+    };
+
+    voiceService.on("mute:change", handleMuteChange);
+    voiceService.on("speaking:change", handleSpeakingChange);
+
+    return () => {
+      voiceService.off("mute:change", handleMuteChange);
+      voiceService.off("speaking:change", handleSpeakingChange);
+    };
+  }, [isVoiceMuted, isVoiceSpeaking]);
 
   // Initialize socket on mount
   useEffect(() => {
@@ -37,19 +94,112 @@ export default function App() {
         if (updatedRoom.currentCode !== undefined) {
           setCode(updatedRoom.currentCode);
         }
+        if (updatedRoom.snapshotBeforeCode !== undefined) {
+          setSnapshotBeforeCode(updatedRoom.snapshotBeforeCode);
+        }
+        if (updatedRoom.phase !== undefined) {
+          setPhase(updatedRoom.phase);
+        }
+        if (updatedRoom.phaseTimeRemaining !== undefined) {
+          setPhaseTimeRemaining(updatedRoom.phaseTimeRemaining);
+        }
         if (updatedRoom.testResults) {
           setTestResults(updatedRoom.testResults);
         }
         if (updatedRoom.timeRemainingSeconds !== undefined) {
           setTimeRemainingSeconds(updatedRoom.timeRemainingSeconds);
         }
+        if (updatedRoom.chatMessages) {
+          setMessages(updatedRoom.chatMessages);
+        }
+        if (updatedRoom.unlockedMysteryClues) {
+          setUnlockedMysteryClues(updatedRoom.unlockedMysteryClues);
+        }
+        if (updatedRoom.totalMysteryCluesCount) {
+          setTotalMysteryCluesCount(updatedRoom.totalMysteryCluesCount);
+        }
+        if (updatedRoom.mafiaCluesUnlockedCount !== undefined) {
+          setMafiaCluesUnlockedCount(updatedRoom.mafiaCluesUnlockedCount);
+        }
         if (updatedRoom.status === "ROLE_REVEAL") {
           setShowRoleModal(true);
         }
       });
 
-      socket.on("code:sync", ({ code: newCode }) => {
+      socket.on("code:sync", ({ code: newCode, updatedByName }) => {
         setCode(newCode);
+      });
+
+      socket.on("game:phase_change", ({ phase: newPhase, phaseTimeRemaining: ptr, snapshotBeforeCode: sbc, currentCode: cc }) => {
+        setPhase(newPhase);
+        setPhaseTimeRemaining(ptr);
+        if (sbc !== undefined) setSnapshotBeforeCode(sbc);
+        if (cc !== undefined) setCode(cc);
+      });
+
+      socket.on("game:phase_tick", ({ phase: p, phaseTimeRemaining: ptr }) => {
+        setPhase(p);
+        setPhaseTimeRemaining(ptr);
+      });
+
+      socket.on("code:player_typing", ({ playerName }) => {
+        if (!playerName) return;
+        setActiveTypers((prev) => {
+          if (!prev.includes(playerName)) return [...prev, playerName];
+          return prev;
+        });
+
+        if (typerTimeoutRef.current) clearTimeout(typerTimeoutRef.current);
+        typerTimeoutRef.current = setTimeout(() => {
+          setActiveTypers([]);
+        }, 2500);
+      });
+
+      // Peer Voice Speaking Indicator
+      socket.on("voice:peer_state", ({ playerId, isMuted: peerMuted, isSpeaking: peerSpeaking }) => {
+        const peerName = room?.players?.[playerId]?.name;
+        if (!peerName) return;
+
+        if (peerSpeaking && !peerMuted) {
+          setActiveSpeakers(prev => prev.includes(peerName) ? prev : [...prev, peerName]);
+
+          // Clear speaker after 2.5s if no update
+          if (speakerTimersRef.current.has(peerName)) {
+            clearTimeout(speakerTimersRef.current.get(peerName));
+          }
+          const t = setTimeout(() => {
+            setActiveSpeakers(prev => prev.filter(n => n !== peerName));
+          }, 2500);
+          speakerTimersRef.current.set(peerName, t);
+        } else {
+          setActiveSpeakers(prev => prev.filter(n => n !== peerName));
+        }
+      });
+
+      socket.on("mystery:clue_unlocked", ({ newlyUnlocked, unlockedCount }) => {
+        if (newlyUnlocked && newlyUnlocked.length > 0) {
+          setUnlockedMysteryClues(prev => {
+            const ids = new Set(prev.map(c => c.testIndex));
+            const fresh = newlyUnlocked.filter(c => !ids.has(c.testIndex));
+            return [...prev, ...fresh];
+          });
+          setMafiaCluesUnlockedCount(unlockedCount || 1);
+
+          // Pop up mystery modal for developers
+          if (player?.role !== "MAFIA") {
+            setActiveMysteryModalClue(newlyUnlocked[0]);
+          }
+        }
+      });
+
+      socket.on("chat:message", (msg) => {
+        setMessages((prev) => [...prev, msg]);
+        setActiveTab((currentTab) => {
+          if (currentTab !== 'chat') {
+            setUnreadChatCount((c) => c + 1);
+          }
+          return currentTab;
+        });
       });
 
       socket.on("game:timer_sync", ({ timeRemainingSeconds: trs }) => {
@@ -66,11 +216,18 @@ export default function App() {
       if (socket) {
         socket.off("room:updated");
         socket.off("code:sync");
+        socket.off("game:phase_change");
+        socket.off("game:phase_tick");
+        socket.off("code:player_typing");
+        socket.off("voice:peer_state");
+        socket.off("mystery:clue_unlocked");
+        socket.off("chat:message");
         socket.off("game:timer_sync");
         socket.off("tests:completed");
       }
+      if (typerTimeoutRef.current) clearTimeout(typerTimeoutRef.current);
     };
-  }, []);
+  }, [player?.role, room?.players]);
 
   // Sync current player state from room
   useEffect(() => {
@@ -81,6 +238,19 @@ export default function App() {
       }
     }
   }, [room]);
+
+  // Handle Voice Toggle
+  const handleToggleVoiceMute = async () => {
+    await voiceService.toggleMute();
+  };
+
+  // Handle Tab Switch (clears unread badge on chat tab)
+  const handleTabSwitch = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'chat') {
+      setUnreadChatCount(0);
+    }
+  };
 
   // Create Room
   const handleCreateRoom = ({ name, avatar, settings }) => {
@@ -101,12 +271,13 @@ export default function App() {
         if (res?.success) {
           setRoom(res.room);
           setCode(res.room.currentCode);
+          if (res.room.chatMessages) setMessages(res.room.chatMessages);
         } else {
           alert(res?.error || "Failed to create room");
         }
       });
     } else {
-      // Offline fallback demo mode
+      // Offline fallback simulator mode
       setIsConnecting(false);
       const challenge = CHALLENGES.find(c => c.id === settings.challengeId) || CHALLENGES[0];
       const mockRoom = {
@@ -118,6 +289,10 @@ export default function App() {
         currentCode: challenge.starterCode,
         players: { [newPlayer.id]: newPlayer },
         activityLog: [{ id: "1", type: "ROOM_CREATED", text: `Room created by ${name}`, timestamp: Date.now() }],
+        chatMessages: [],
+        phase: "CODING",
+        phaseTimeRemaining: 30,
+        snapshotBeforeCode: challenge.starterCode,
         timeRemainingSeconds: settings.durationMinutes * 60
       };
       setRoom(mockRoom);
@@ -144,13 +319,14 @@ export default function App() {
         if (res?.success) {
           setRoom(res.room);
           setCode(res.room.currentCode);
+          if (res.room.chatMessages) setMessages(res.room.chatMessages);
         } else {
           alert(res?.error || "Failed to join room");
         }
       });
     } else {
       setIsConnecting(false);
-      alert("Backend server is not connected. You can create a new mission lobby to test the interactive simulation!");
+      alert("Backend server is not connected. Connect both backend & frontend to test multiplayer!");
     }
   };
 
@@ -194,9 +370,15 @@ export default function App() {
         }
       };
       setPlayer(updatedPlayer);
+      setSnapshotBeforeCode(room.challenge.starterCode);
+      setPhase("CODING");
+      setPhaseTimeRemaining(30);
       setRoom(prev => ({
         ...prev,
         status: "ROLE_REVEAL",
+        phase: "CODING",
+        phaseTimeRemaining: 30,
+        snapshotBeforeCode: room.challenge.starterCode,
         players: { [player.id]: updatedPlayer }
       }));
       setShowRoleModal(true);
@@ -214,12 +396,44 @@ export default function App() {
     }
   };
 
-  // Code Change
+  // Code Change & Typing Presence
   const handleCodeChange = (newCode) => {
     setCode(newCode);
     const socket = socketService.getSocket();
     if (socket && socket.connected) {
       socket.emit("code:change", { code: newCode });
+    }
+  };
+
+  const handleTyping = () => {
+    const now = Date.now();
+    if (now - lastTypingEmitRef.current > 1200) {
+      lastTypingEmitRef.current = now;
+      const socket = socketService.getSocket();
+      if (socket && socket.connected) {
+        socket.emit("code:typing");
+      }
+    }
+  };
+
+  // Send Chat Message
+  const handleSendMessage = (text) => {
+    if (!text?.trim()) return;
+    const socket = socketService.getSocket();
+    if (socket && socket.connected) {
+      socket.emit("chat:send", { message: text });
+    } else {
+      // Local fallback simulator
+      const localMsg = {
+        id: "msg_" + Date.now(),
+        senderId: player?.id || "local",
+        senderName: player?.name || "You",
+        senderAvatar: player?.avatar || "👨‍💻",
+        isAlive: player?.isAlive ?? true,
+        message: text,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, localMsg]);
     }
   };
 
@@ -250,6 +464,19 @@ export default function App() {
           ]
         };
         setTestResults(results);
+
+        // Simulate mystery riddle unbox in offline simulator
+        const mockClue = {
+          testIndex: 0,
+          clueNumber: 1,
+          title: "Initial Ignition",
+          riddle: "The saboteur walks among us under an alias with 5 characters starting with 'P'.",
+          revealedSnippet: "P _ _ _ _"
+        };
+        setUnlockedMysteryClues([mockClue]);
+        if (player?.role !== "MAFIA") {
+          setActiveMysteryModalClue(mockClue);
+        }
       }, 600);
     }
   };
@@ -265,7 +492,7 @@ export default function App() {
       setRoom(prev => ({
         ...prev,
         status: "VOTING",
-        meeting: { callerName: player.name, durationSeconds: 45 }
+        meeting: { callerName: player?.name || "Team", durationSeconds: 45 }
       }));
     }
   };
@@ -299,13 +526,16 @@ export default function App() {
   const handlePlayAgain = () => {
     setRoom(null);
     setTestResults(null);
+    setMessages([]);
+    setUnlockedMysteryClues([]);
+    setActiveMysteryModalClue(null);
   };
 
   const isInGame = room && (room.status === "PLAYING" || room.status === "VOTING" || room.status === "GAME_OVER");
 
   return (
     <div className="min-h-screen flex flex-col bg-[#080b11] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white">
-      {/* Top Navbar */}
+      {/* Top Navbar with Voice Controls & Leaderboard */}
       <Navbar
         room={room}
         player={player}
@@ -315,6 +545,11 @@ export default function App() {
         authUser={authUser}
         onOpenAuth={() => setShowAuthModal(true)}
         onLogout={() => { logoutUser(); setAuthUser(null); }}
+        onOpenLeaderboard={() => setShowLeaderboardModal(true)}
+        isMuted={isVoiceMuted}
+        isSpeaking={isVoiceSpeaking}
+        onToggleMute={handleToggleVoiceMute}
+        activeSpeakers={activeSpeakers}
       />
 
       {/* Main Content */}
@@ -373,35 +608,162 @@ export default function App() {
             </div>
 
             {/* Split Arena Grid */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[550px]">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[560px]">
               {/* Left: Code Editor (7 cols) */}
-              <div className="lg:col-span-7 h-full min-h-[400px]">
+              <div className="lg:col-span-7 h-full min-h-[420px]">
                 <CodeEditor
                   code={code}
+                  snapshotBeforeCode={snapshotBeforeCode}
                   onChange={handleCodeChange}
                   onReset={handleResetCode}
+                  onTyping={handleTyping}
+                  player={player}
+                  phase={phase}
+                  phaseTimeRemaining={phaseTimeRemaining}
                   readOnly={!player?.isAlive}
+                  activeTypers={activeTypers}
                 />
               </div>
 
-              {/* Right: Test Runner & Audit Feed (5 cols) */}
-              <div className="lg:col-span-5 flex flex-col space-y-4 h-full">
-                <div className="flex-1 min-h-[250px]">
-                  <TestRunner
-                    testResults={testResults}
-                    onRunTests={handleRunTests}
-                    isRunningTests={isRunningTests}
-                    challenge={room.challenge}
-                  />
+              {/* Right: Dynamic Multi-Tab Control Center (5 cols) */}
+              <div className="lg:col-span-5 flex flex-col h-full space-y-3">
+                {/* Tab Switcher */}
+                <div className="grid grid-cols-5 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold gap-1 shadow">
+                  <button
+                    type="button"
+                    onClick={() => handleTabSwitch('tests')}
+                    title="Automated Unit Tests"
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                      activeTab === 'tests'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Tests</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabSwitch('mystery')}
+                    title="Mystery Box Clues Dossier"
+                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                      activeTab === 'mystery'
+                        ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Gift className="h-3.5 w-3.5 text-purple-400" />
+                    <span className="hidden sm:inline">Clues</span>
+                    {unlockedMysteryClues.length > 0 && (
+                      <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-purple-500 text-white font-mono text-[8px] font-bold">
+                        {unlockedMysteryClues.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabSwitch('activity')}
+                    title="CCTV Activity Audit Log"
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                      activeTab === 'activity'
+                        ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Activity className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Audit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabSwitch('evidence')}
+                    title="Evidence & Investigation Board"
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                      activeTab === 'evidence'
+                        ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Evidence</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabSwitch('chat')}
+                    title="Live Team Discussion"
+                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                      activeTab === 'chat'
+                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Chat</span>
+                    {unreadChatCount > 0 && activeTab !== 'chat' && (
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-mono text-[9px] font-bold animate-bounce">
+                        {unreadChatCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
-                <div className="h-56">
-                  <ActivityFeed activityLog={room.activityLog || []} />
+
+                {/* Tab Panels */}
+                <div className="flex-1 min-h-[450px]">
+                  {activeTab === 'tests' && (
+                    <TestRunner
+                      testResults={testResults}
+                      onRunTests={handleRunTests}
+                      isRunningTests={isRunningTests}
+                      challenge={room.challenge}
+                    />
+                  )}
+
+                  {activeTab === 'mystery' && (
+                    <MysteryCluesDossier
+                      unlockedClues={unlockedMysteryClues}
+                      totalCluesCount={totalMysteryCluesCount}
+                      player={player}
+                      mafiaCluesUnlockedCount={mafiaCluesUnlockedCount}
+                    />
+                  )}
+
+                  {activeTab === 'activity' && (
+                    <ActivityFeed activityLog={room.activityLog || []} />
+                  )}
+
+                  {activeTab === 'evidence' && (
+                    <EvidenceBoard
+                      activityLog={room.activityLog || []}
+                      testResults={testResults}
+                      challenge={room.challenge}
+                    />
+                  )}
+
+                  {activeTab === 'chat' && (
+                    <ChatBox
+                      messages={messages}
+                      onSendMessage={handleSendMessage}
+                      player={player}
+                      title="MISSION TEAM CHAT"
+                    />
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* Global Leaderboard & Stats Modal */}
+      <LeaderboardModal
+        isOpen={showLeaderboardModal}
+        onClose={() => setShowLeaderboardModal(false)}
+        player={player}
+        authUser={authUser}
+      />
 
       {/* Secret Role Reveal Modal */}
       {showRoleModal && (
@@ -411,11 +773,25 @@ export default function App() {
         />
       )}
 
-      {/* Emergency Meeting / Voting Modal */}
+      {/* Mystery Box Clue Unbox Popup Modal */}
+      {activeMysteryModalClue && (
+        <MysteryBoxModal
+          clue={activeMysteryModalClue}
+          onClose={() => setActiveMysteryModalClue(null)}
+          onOpenDossier={() => {
+            setActiveMysteryModalClue(null);
+            setActiveTab('mystery');
+          }}
+        />
+      )}
+
+      {/* Emergency Meeting / Voting Modal (Dual Pane with Live Debate Chat) */}
       {room?.status === "VOTING" && (
         <VotingModal
           room={room}
           player={player}
+          messages={messages}
+          onSendMessage={handleSendMessage}
           onCastVote={handleCastVote}
         />
       )}

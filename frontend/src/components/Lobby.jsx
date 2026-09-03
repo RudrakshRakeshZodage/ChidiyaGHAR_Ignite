@@ -61,7 +61,8 @@ export default function Lobby({
   if (room) {
     const playersList = Object.values(room.players || {});
     const isHost = player?.isHost;
-    const canStart = playersList.length >= 1; // Can start with 1+ players (supports solo testing and multiplayer)
+    const canStart = playersList.length >= 2 && playersList.length <= 8;
+    const needsMorePlayers = playersList.length < 2;
 
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -80,8 +81,13 @@ export default function Lobby({
                   #{room.code}
                 </span>
               </div>
-              <p className="text-sm text-slate-400">
-                Waiting for team members to assemble before secret roles are assigned.
+              <p className="text-sm text-slate-400 flex items-center space-x-2">
+                <span>Waiting for squad members (Min: 2, Max: 8).</span>
+                {needsMorePlayers && (
+                  <span className="text-amber-400 font-semibold font-mono text-xs bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded">
+                    Need 1 more player to start
+                  </span>
+                )}
               </p>
             </div>
 
@@ -102,6 +108,7 @@ export default function Lobby({
                 <button
                   onClick={onStartGame}
                   disabled={!canStart}
+                  title={needsMorePlayers ? "Minimum 2 players required to start the mission" : "Start the game mission"}
                   className="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-purple-600 to-sky-600 hover:from-rose-500 hover:to-sky-500 text-white font-extrabold text-sm shadow-xl shadow-purple-600/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   <Play className="h-4 w-4 fill-white" />
