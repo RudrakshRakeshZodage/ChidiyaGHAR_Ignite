@@ -417,12 +417,54 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 12. Disconnect
+  // Auto-close check: if only 1 player remains after others leave, auto-close in 5s
+  function handleRoomAutoCloseCheck(room) {
+    if (!room) return;
+    if (room.players.size === 1) {
+      if (room._autoCloseTimeout) clearTimeout(room._autoCloseTimeout);
+
+      io.to(room.code).emit("room:auto_closing", {
+        countdownSeconds: 5,
+        reason: "All other players have left. Room will auto-close in 5 seconds."
+      });
+
+      room._autoCloseTimeout = setTimeout(() => {
+        const r = roomManager.getRoom(room.code);
+        if (r && r.players.size <= 1) {
+          io.to(r.code).emit("room:force_exit", {
+            reason: "Room closed: All other players left the mission."
+          });
+          if (r.timer) clearInterval(r.timer);
+          roomManager.rooms.delete(r.code);
+        }
+      }, 5000);
+    } else if (room.players.size > 1 && room._autoCloseTimeout) {
+      clearTimeout(room._autoCloseTimeout);
+      room._autoCloseTimeout = null;
+      io.to(room.code).emit("room:auto_close_cancelled");
+    }
+  }
+
+  // 12. Explicit Leave Room
+  socket.on("room:leave", () => {
+    if (!currentRoomCode || !currentPlayerId) return;
+    const room = roomManager.leaveRoom(currentRoomCode, currentPlayerId);
+    socket.leave(currentRoomCode);
+    if (room) {
+      broadcastRoomState(room);
+      handleRoomAutoCloseCheck(room);
+    }
+    currentRoomCode = null;
+    currentPlayerId = null;
+  });
+
+  // 13. Disconnect
   socket.on("disconnect", () => {
     if (currentRoomCode && currentPlayerId) {
       const room = roomManager.leaveRoom(currentRoomCode, currentPlayerId);
       if (room) {
         broadcastRoomState(room);
+        handleRoomAutoCloseCheck(room);
       }
     }
   });

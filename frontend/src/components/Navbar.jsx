@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, ShieldAlert, Copy, Check, Users, Clock, AlertTriangle, Trophy } from 'lucide-react';
+import { Terminal, ShieldAlert, Copy, Check, Users, Clock, AlertTriangle, Trophy, LogOut } from 'lucide-react';
 import VoiceControls from './VoiceControls';
 
 export default function Navbar({
@@ -12,6 +12,7 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenLeaderboard,
+  onLeaveRoom,
   isMuted = true,
   isSpeaking = false,
   onToggleMute,
@@ -104,6 +105,18 @@ export default function Navbar({
               <AlertTriangle className="h-3.5 w-3.5" />
               <span className="hidden md:inline">EMERGENCY MEETING</span>
               <span className="md:hidden">MEETING</span>
+            </button>
+          )}
+
+          {/* Leave Room Button */}
+          {onLeaveRoom && (
+            <button
+              onClick={onLeaveRoom}
+              title="Leave Room & Return to Lobby"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/80 border border-slate-700/80 hover:border-rose-700 text-slate-400 hover:text-rose-300 transition text-xs flex items-center space-x-1"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline font-mono font-bold">LEAVE</span>
             </button>
           )}
         </div>

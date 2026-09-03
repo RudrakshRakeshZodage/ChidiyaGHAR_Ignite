@@ -36,6 +36,7 @@ export default function App() {
   const [snapshotBeforeCode, setSnapshotBeforeCode] = useState("");
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(null);
 
   // Real-time Voice Chat State
   const [isVoiceMuted, setIsVoiceMuted] = useState(true);
@@ -210,6 +211,23 @@ export default function App() {
         setTestResults(tr);
         setIsRunningTests(false);
       });
+
+      // 5-second Auto-Close Countdown when all other players leave
+      socket.on("room:auto_closing", ({ countdownSeconds }) => {
+        setAutoCloseCountdown(countdownSeconds || 5);
+      });
+
+      socket.on("room:auto_close_cancelled", () => {
+        setAutoCloseCountdown(null);
+      });
+
+      socket.on("room:force_exit", () => {
+        setAutoCloseCountdown(null);
+        setRoom(null);
+        setPlayer(null);
+        setMessages([]);
+        setUnlockedMysteryClues([]);
+      });
     }
 
     return () => {
@@ -224,6 +242,9 @@ export default function App() {
         socket.off("chat:message");
         socket.off("game:timer_sync");
         socket.off("tests:completed");
+        socket.off("room:auto_closing");
+        socket.off("room:auto_close_cancelled");
+        socket.off("room:force_exit");
       }
       if (typerTimeoutRef.current) clearTimeout(typerTimeoutRef.current);
     };
@@ -534,12 +555,36 @@ export default function App() {
     setMessages([]);
     setUnlockedMysteryClues([]);
     setActiveMysteryModalClue(null);
+    setAutoCloseCountdown(null);
+  };
+
+  // Explicit Leave Room
+  const handleLeaveRoom = () => {
+    const socket = socketService.getSocket();
+    if (socket && socket.connected) {
+      socket.emit("room:leave");
+    }
+    setRoom(null);
+    setPlayer(null);
+    setTestResults(null);
+    setMessages([]);
+    setUnlockedMysteryClues([]);
+    setActiveMysteryModalClue(null);
+    setAutoCloseCountdown(null);
   };
 
   const isInGame = room && (room.status === "PLAYING" || room.status === "VOTING" || room.status === "GAME_OVER");
 
   return (
     <div className="min-h-screen flex flex-col bg-[#080b11] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white">
+      {/* 5-second Auto-Close Countdown Toast / Banner */}
+      {autoCloseCountdown !== null && (
+        <div className="sticky top-0 z-50 bg-gradient-to-r from-rose-950 via-red-900 to-rose-950 text-white py-2.5 px-4 text-center font-mono text-xs font-bold border-b border-rose-500 shadow-2xl flex items-center justify-center space-x-2 animate-pulse">
+          <AlertCircle className="h-4 w-4 text-amber-400 animate-spin" />
+          <span>⚠️ All other players have left! Room will auto-close and return to Lobby in {autoCloseCountdown}s...</span>
+        </div>
+      )}
+
       {/* Top Navbar with Voice Controls & Leaderboard */}
       <Navbar
         room={room}
@@ -551,6 +596,7 @@ export default function App() {
         onOpenAuth={() => setShowAuthModal(true)}
         onLogout={() => { logoutUser(); setAuthUser(null); }}
         onOpenLeaderboard={() => setShowLeaderboardModal(true)}
+        onLeaveRoom={room ? handleLeaveRoom : null}
         isMuted={isVoiceMuted}
         isSpeaking={isVoiceSpeaking}
         onToggleMute={handleToggleVoiceMute}
