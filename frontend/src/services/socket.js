@@ -1,6 +1,12 @@
 import { io } from "socket.io-client";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : window.location.origin);
 
 class SocketService {
   constructor() {
@@ -11,14 +17,14 @@ class SocketService {
   }
 
   connect() {
-    if (this.socket) return this.socket;
+    if (this.socket && this.socket.connected) return this.socket;
 
     try {
       this.socket = io(BACKEND_URL, {
         transports: ["websocket", "polling"],
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 10,
         reconnectionDelay: 1000,
-        timeout: 5000
+        timeout: 10000
       });
 
       this.socket.on("connect", () => {
@@ -28,7 +34,7 @@ class SocketService {
       });
 
       this.socket.on("connect_error", (err) => {
-        console.warn("⚠️ Cannot connect to backend server. Operating in offline/simulator mode.", err.message);
+        console.warn("⚠️ Cannot connect to backend server at", BACKEND_URL, ":", err.message);
         this.isConnected = false;
       });
 
@@ -45,8 +51,8 @@ class SocketService {
   }
 
   getSocket() {
-    if (!this.socket) {
-      this.connect();
+    if (!this.socket || !this.socket.connected) {
+      return this.connect();
     }
     return this.socket;
   }

@@ -313,7 +313,7 @@ export default function App() {
     setIsConnecting(true);
 
     const socket = socketService.getSocket();
-    if (socket && socket.connected) {
+    if (socket) {
       socket.emit("room:join", { roomCode, player: newPlayer }, (res) => {
         setIsConnecting(false);
         if (res?.success) {
@@ -324,6 +324,11 @@ export default function App() {
           alert(res?.error || "Failed to join room");
         }
       });
+
+      // Fallback timeout in case socket is offline
+      setTimeout(() => {
+        setIsConnecting(false);
+      }, 4000);
     } else {
       setIsConnecting(false);
       alert("Backend server is not connected. Connect both backend & frontend to test multiplayer!");
