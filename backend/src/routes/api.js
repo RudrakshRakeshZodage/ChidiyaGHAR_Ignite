@@ -1,5 +1,6 @@
 import express from "express";
 import { CHALLENGES } from "../game/challenges.js";
+import { fetchRealtimeLeaderboard, fetchUserProfile } from "../db/supabase.js";
 
 let pingCount = 0;
 
@@ -82,6 +83,17 @@ export function createApiRouter(roomManager) {
 
   router.get("/leaderboard", async (req, res) => {
     const data = await fetchRealtimeLeaderboard();
+    res.json(data);
+  });
+
+  // Individual User Profile Stats & Match History
+  router.get("/api/profile/:username", async (req, res) => {
+    const data = await fetchUserProfile(req.params.username);
+    res.json(data);
+  });
+
+  router.get("/profile/:username", async (req, res) => {
+    const data = await fetchUserProfile(req.params.username);
     res.json(data);
   });
 

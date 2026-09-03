@@ -10,6 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // In-memory cache & fallback store for real-time live match updates
 const activePlayerStats = new Map();
+const recentMatchesHistory = [];
 
 /**
  * Record completed game match & update player stats in Supabase in real time
@@ -17,9 +18,15 @@ const activePlayerStats = new Map();
 export async function recordGameResult(roomData) {
   try {
     const winner = roomData.winner; // 'DEVELOPERS' or 'MAFIA'
-    const playerCount = Object.keys(roomData.players || {}).length || roomData.players?.size || 1;
+    const playersList = Array.isArray(roomData.players) 
+      ? roomData.players 
+      : roomData.players instanceof Map 
+      ? Array.from(roomData.players.values())
+      : Object.values(roomData.players || {});
 
-    // 1. Insert game match record
+    const playerCount = playersList.length || 1;
+
+    // 1. Insert game match record into Supabase
     const matchRecord = {
       room_code: roomData.code,
       winner: winner,
@@ -29,23 +36,28 @@ export async function recordGameResult(roomData) {
       created_at: new Date().toISOString()
     };
 
-    const { error: matchError } = await supabase
-      .from("game_matches")
-      .insert([matchRecord]);
+    recentMatchesHistory.unshift({
+      ...matchRecord,
+      challengeTitle: roomData.challenge?.title || "E-Commerce Cart Checkout",
+      players: playersList.map(p => ({ name: p.name, avatar: p.avatar, role: p.role }))
+    });
+    if (recentMatchesHistory.length > 50) recentMatchesHistory.pop();
 
-    if (matchError) {
-      console.log("ℹ️ Supabase match insert note:", matchError.message);
-    } else {
-      console.log(`✅ Real-time match recorded to Supabase for room ${roomData.code}`);
+    try {
+      const { error: matchError } = await supabase
+        .from("game_matches")
+        .insert([matchRecord]);
+
+      if (matchError) {
+        console.log("ℹ️ Supabase match insert note:", matchError.message);
+      } else {
+        console.log(`✅ Match recorded to Supabase for room ${roomData.code}`);
+      }
+    } catch (e) {
+      console.log("ℹ️ Supabase game match insert skipped:", e.message);
     }
 
     // 2. Update real-time stats for each participating player
-    const playersList = Array.isArray(roomData.players) 
-      ? roomData.players 
-      : roomData.players instanceof Map 
-      ? Array.from(roomData.players.values())
-      : Object.values(roomData.players || {});
-
     for (const player of playersList) {
       if (!player.name) continue;
 
@@ -75,7 +87,22 @@ export async function recordGameResult(roomData) {
       existing.avatar = player.avatar || existing.avatar;
       activePlayerStats.set(player.name, existing);
 
-      // Upsert to Supabase profiles / leaderboard
+      // Upsert to Supabase leaderboard table
+      try {
+        await supabase
+          .from("leaderboard")
+          .upsert({
+            username: player.name,
+            avatar: player.avatar || "👨‍💻",
+            wins: existing.wins,
+            games_played: existing.matches,
+            updated_at: new Date().toISOString()
+          }, { onConflict: "username" });
+      } catch (dbErr) {
+        console.log(`ℹ️ Real-time leaderboard sync note for ${player.name}:`, dbErr.message);
+      }
+
+      // Also attempt profiles table update if exists
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -93,19 +120,8 @@ export async function recordGameResult(roomData) {
             })
             .eq("id", profile.id);
         }
-
-        // Also update leaderboard table
-        await supabase
-          .from("leaderboard")
-          .upsert({
-            username: player.name,
-            avatar: player.avatar || "👨‍💻",
-            wins: existing.wins,
-            games_played: existing.matches,
-            updated_at: new Date().toISOString()
-          }, { onConflict: "username" });
-      } catch (dbErr) {
-        console.log(`ℹ️ Real-time player stat sync note for ${player.name}:`, dbErr.message);
+      } catch {
+        // Profiles table optional
       }
     }
   } catch (err) {
@@ -114,20 +130,95 @@ export async function recordGameResult(roomData) {
 }
 
 /**
- * Generates dynamic badges based on player statistics
+ * Generates dynamic badges & achievements based on player statistics
  */
-function getBadgesForPlayer(player) {
+export function getBadgesForPlayer(player) {
   const badges = [];
-  const winRateNum = player.matches > 0 ? (player.wins / player.matches) * 100 : 0;
+  const matches = player.matches || 0;
+  const wins = player.wins || 0;
+  const winRateNum = matches > 0 ? (wins / matches) * 100 : 0;
 
-  if (player.mafiaWins >= 3) badges.push("Master Saboteur");
-  if (player.devWins >= 5) badges.push("Grandmaster Debugger");
-  if (winRateNum >= 75 && player.matches >= 4) badges.push("Ghost Infiltrator");
-  if (player.elo >= 1800) badges.push("Elite Hacker");
-  if (player.matches >= 10) badges.push("Veteran Stabilizer");
-  if (badges.length === 0) badges.push(player.favoriteRole === "MAFIA" ? "Stealth Agent" : "Code Optimizer");
+  if (wins >= 1) badges.push({ id: "first_win", name: "First Victory", icon: "🏆", desc: "Won your first Code Mafia mission" });
+  if (player.mafiaWins >= 3) badges.push({ id: "master_saboteur", name: "Master Saboteur", icon: "🥷", desc: "Won 3+ matches as Code Mafia" });
+  if (player.devWins >= 3) badges.push({ id: "grandmaster_debugger", name: "Grandmaster Debugger", icon: "👩‍💻", desc: "Won 3+ matches as Developer" });
+  if (winRateNum >= 75 && matches >= 3) badges.push({ id: "ghost_infiltrator", name: "Ghost Infiltrator", icon: "👻", desc: "Maintained a 75%+ Win Rate" });
+  if (player.elo >= 1600) badges.push({ id: "elite_hacker", name: "Elite Hacker", icon: "⚡", desc: "Surpassed 1600 ELO Rating" });
+  if (matches >= 5) badges.push({ id: "veteran", name: "Veteran Stabilizer", icon: "🛡️", desc: "Completed 5+ total operations" });
+
+  if (badges.length === 0) {
+    badges.push({ id: "rookie", name: "Active Operative", icon: "👨‍💻", desc: "Ready to stabilize codebases" });
+  }
 
   return badges;
+}
+
+/**
+ * Fetches single player profile stats & match history
+ */
+export async function fetchUserProfile(username) {
+  try {
+    const leaderboardResult = await fetchRealtimeLeaderboard();
+    const allPlayers = leaderboardResult.leaderboard || [];
+    
+    // Find player in leaderboard or construct default
+    let playerObj = allPlayers.find(p => p.name?.toLowerCase() === username?.toLowerCase());
+
+    if (!playerObj) {
+      const inMemory = activePlayerStats.get(username);
+      const matches = inMemory?.matches || 0;
+      const wins = inMemory?.wins || 0;
+      const elo = inMemory?.elo || 1500;
+      const winRate = matches > 0 ? Math.round((wins / matches) * 100) : 0;
+
+      playerObj = {
+        id: username,
+        rank: allPlayers.length + 1,
+        name: username,
+        avatar: inMemory?.avatar || "👨‍💻",
+        elo: elo,
+        matches: matches,
+        wins: wins,
+        losses: Math.max(0, matches - wins),
+        winRate: `${winRate}%`,
+        favoriteRole: "DEVELOPER",
+        devWins: inMemory?.devWins || 0,
+        mafiaWins: inMemory?.mafiaWins || 0
+      };
+      playerObj.badges = getBadgesForPlayer(playerObj);
+    } else {
+      playerObj.losses = Math.max(0, playerObj.matches - playerObj.wins);
+    }
+
+    // Filter recent match history for this user
+    const userMatchHistory = recentMatchesHistory
+      .filter(m => m.players?.some(p => p.name?.toLowerCase() === username?.toLowerCase()))
+      .map(m => {
+        const myPlayer = m.players.find(p => p.name?.toLowerCase() === username?.toLowerCase());
+        const isMafia = myPlayer?.role === "MAFIA";
+        const didWin = (isMafia && m.winner === "MAFIA") || (!isMafia && m.winner === "DEVELOPERS");
+        return {
+          roomCode: m.room_code,
+          winner: m.winner,
+          winReason: m.win_reason,
+          challengeTitle: m.challengeTitle,
+          role: myPlayer?.role || "DEVELOPER",
+          didWin,
+          createdAt: m.created_at
+        };
+      });
+
+    return {
+      success: true,
+      profile: playerObj,
+      recentMatches: userMatchHistory
+    };
+  } catch (err) {
+    console.warn("fetchUserProfile error:", err.message);
+    return {
+      success: false,
+      error: err.message
+    };
+  }
 }
 
 /**
@@ -135,7 +226,6 @@ function getBadgesForPlayer(player) {
  */
 export async function fetchRealtimeLeaderboard() {
   try {
-    // 1. Fetch total matches count
     let totalMatches = 0;
     try {
       const { count } = await supabase
@@ -146,24 +236,23 @@ export async function fetchRealtimeLeaderboard() {
       totalMatches = 0;
     }
 
-    // 2. Fetch all real player records from Supabase
     let dbPlayers = [];
     try {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username, avatar, matches_played, wins")
+      const { data: leaderboardRows } = await supabase
+        .from("leaderboard")
+        .select("id, username, avatar, wins, games_played")
         .order("wins", { ascending: false })
         .limit(50);
 
-      if (profiles && profiles.length > 0) {
-        dbPlayers = profiles.map(p => ({
+      if (leaderboardRows && leaderboardRows.length > 0) {
+        dbPlayers = leaderboardRows.map(p => ({
           username: p.username,
           avatar: p.avatar || "👨‍💻",
-          matches: p.matches_played || 0,
+          matches: p.games_played || 0,
           wins: p.wins || 0,
           devWins: Math.ceil((p.wins || 0) * 0.7),
           mafiaWins: Math.floor((p.wins || 0) * 0.3),
-          elo: 1500 + ((p.wins || 0) * 25) - (((p.matches_played || 0) - (p.wins || 0)) * 10)
+          elo: 1500 + ((p.wins || 0) * 25) - (((p.games_played || 0) - (p.wins || 0)) * 10)
         }));
       }
     } catch {
@@ -173,10 +262,8 @@ export async function fetchRealtimeLeaderboard() {
     // Merge with in-memory active session matches
     const allPlayersMap = new Map();
 
-    // Add DB records
     dbPlayers.forEach(p => allPlayersMap.set(p.username, p));
 
-    // Add / override with active session updates
     for (const [uname, stats] of activePlayerStats.entries()) {
       const existing = allPlayersMap.get(uname);
       if (existing) {
@@ -190,7 +277,6 @@ export async function fetchRealtimeLeaderboard() {
       }
     }
 
-    // If no match records yet, include baseline active agents
     if (allPlayersMap.size === 0) {
       const defaultProfiles = [
         { username: "ShadowHacker", avatar: "🥷", matches: 14, wins: 11, devWins: 3, mafiaWins: 8, elo: 1775 },
@@ -202,7 +288,6 @@ export async function fetchRealtimeLeaderboard() {
       defaultProfiles.forEach(p => allPlayersMap.set(p.username, p));
     }
 
-    // Format & sort leaderboard by ELO and Wins
     const formatted = Array.from(allPlayersMap.values())
       .sort((a, b) => (b.elo || 0) - (a.elo || 0) || (b.wins || 0) - (a.wins || 0))
       .map((p, index) => {
@@ -220,6 +305,7 @@ export async function fetchRealtimeLeaderboard() {
           winRate: `${winRate}%`,
           matches: matches,
           wins: wins,
+          losses: Math.max(0, matches - wins),
           favoriteRole: isMafiaPref ? "MAFIA" : "DEVELOPER",
           devWins: p.devWins || 0,
           mafiaWins: p.mafiaWins || 0

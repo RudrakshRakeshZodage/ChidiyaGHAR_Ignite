@@ -15,6 +15,7 @@ import EvidenceBoard from './components/EvidenceBoard';
 import MysteryCluesDossier from './components/MysteryCluesDossier';
 import MysteryBoxModal from './components/MysteryBoxModal';
 import LeaderboardModal from './components/LeaderboardModal';
+import UserProfileModal from './components/UserProfileModal';
 import ChatBox from './components/ChatBox';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
@@ -25,6 +26,7 @@ export default function App() {
   const [authUser, setAuthUser] = useState(getStoredUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [player, setPlayer] = useState(null);
   const [room, setRoom] = useState(null);
   const [code, setCode] = useState("");
@@ -633,6 +635,7 @@ export default function App() {
         onOpenAuth={() => setShowAuthModal(true)}
         onLogout={() => { logoutUser(); setAuthUser(null); }}
         onOpenLeaderboard={() => setShowLeaderboardModal(true)}
+        onOpenProfile={() => setShowProfileModal(true)}
         onLeaveRoom={room ? handleLeaveRoom : null}
         isMuted={isVoiceMuted}
         isSpeaking={isVoiceSpeaking}
@@ -852,6 +855,14 @@ export default function App() {
         player={player}
         authUser={authUser}
         room={room}
+      />
+
+      {/* User Operative Profile Modal */}
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        player={player}
+        authUser={authUser}
       />
 
       {/* Secret Role Reveal Modal */}

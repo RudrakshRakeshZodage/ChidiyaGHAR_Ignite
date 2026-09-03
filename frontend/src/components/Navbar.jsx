@@ -12,6 +12,7 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenLeaderboard,
+  onOpenProfile,
   onLeaveRoom,
   isMuted = true,
   isSpeaking = false,
@@ -132,6 +133,19 @@ export default function Navbar({
           activeSpeakers={activeSpeakers}
         />
 
+        {/* Profile Dossier Trigger */}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          title="Open Your Operative Profile & Stats"
+          className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/60 text-sky-400 transition text-xs flex items-center space-x-1.5 shadow-md"
+        >
+          <span className="text-sm select-none">{player?.avatar || authUser?.avatar || "👨‍💻"}</span>
+          <span className="hidden sm:inline text-xs font-mono font-bold text-slate-200 truncate max-w-[80px]">
+            {player?.name || authUser?.username || "PROFILE"}
+          </span>
+        </button>
+
         {/* Leaderboard Trigger Button */}
         <button
           type="button"
@@ -143,25 +157,15 @@ export default function Navbar({
           <span className="hidden xl:inline text-xs font-mono font-bold">RANKS</span>
         </button>
 
-        {/* Profile / Auth Status */}
+        {/* Auth Sign In / Exit */}
         {authUser ? (
-          <div className="flex items-center space-x-1.5">
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-base select-none">{authUser.avatar || "👨‍💻"}</span>
-              <div className="text-left hidden lg:block">
-                <div className="text-xs font-semibold text-slate-200 truncate max-w-[90px]">
-                  {authUser.username || authUser.email?.split("@")[0]}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={onLogout}
-              title="Sign Out"
-              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 transition text-xs"
-            >
-              Exit
-            </button>
-          </div>
+          <button
+            onClick={onLogout}
+            title="Sign Out"
+            className="p-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/80 border border-slate-800 hover:border-rose-700 text-slate-400 hover:text-rose-300 transition text-xs font-mono font-bold"
+          >
+            LOGOUT
+          </button>
         ) : (
           <button
             onClick={onOpenAuth}
