@@ -273,4 +273,19 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
   console.log(`🚀 Code Mafia Backend running on port ${PORT}`);
   console.log(`📡 Health Check URL: http://localhost:${PORT}/health`);
+  console.log(`📡 Anti-Sleep Ping URL: http://localhost:${PORT}/ping`);
+
+  // Optional Self-Ping ticker (prevents Render free tier from sleeping)
+  const externalUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+  if (externalUrl) {
+    console.log(`🤖 Anti-Sleep Self-Pinger activated for: ${externalUrl}`);
+    setInterval(async () => {
+      try {
+        await fetch(`${externalUrl}/ping`);
+        console.log(`[Anti-Sleep] Self-ping successful at ${new Date().toLocaleTimeString()}`);
+      } catch (err) {
+        console.warn(`[Anti-Sleep] Self-ping error:`, err.message);
+      }
+    }, 10 * 60 * 1000); // every 10 minutes
+  }
 });

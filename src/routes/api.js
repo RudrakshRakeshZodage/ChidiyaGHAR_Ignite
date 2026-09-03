@@ -1,22 +1,58 @@
 import express from "express";
 import { CHALLENGES } from "../game/challenges.js";
 
+let pingCount = 0;
+
 export function createApiRouter(roomManager) {
   const router = express.Router();
 
-  // Deployment Health Check
-  router.get("/health", (req, res) => {
+  // Root endpoint (Keeps server awake & displays API info)
+  router.get("/", (req, res) => {
+    pingCount++;
     res.json({
+      service: "Code Mafia Game Engine Backend",
+      status: "alive",
+      uptimeSeconds: Math.floor(process.uptime()),
+      totalPingsReceived: pingCount,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Fast lightweight ping endpoint for UptimeRobot / cron-job.org
+  router.all("/ping", (req, res) => {
+    pingCount++;
+    res.status(200).send("pong");
+  });
+
+  // Health check endpoint
+  router.all("/health", (req, res) => {
+    pingCount++;
+    res.status(200).json({
       status: "ok",
-      uptime: process.uptime(),
+      uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
       service: "Code Mafia Game Engine Backend",
-      version: "1.0.0"
+      version: "1.0.0",
+      pingsReceived: pingCount,
+      memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024)
+    });
+  });
+
+  // Keep-alive route for external robots
+  router.all("/keep-alive", (req, res) => {
+    pingCount++;
+    res.status(200).json({
+      status: "alive",
+      message: "Server is awake and ready for multiplayer sessions!",
+      uptimeHours: (process.uptime() / 3600).toFixed(2),
+      activeRooms: roomManager.rooms.size,
+      pingsReceived: pingCount,
+      timestamp: new Date().toISOString()
     });
   });
 
   // Public stats & active rooms count
-  router.get("/status", (req, res) => {
+  router.get("/api/status", (req, res) => {
     res.json({
       activeRooms: roomManager.rooms.size,
       challengesAvailable: CHALLENGES.length,
@@ -25,7 +61,7 @@ export function createApiRouter(roomManager) {
   });
 
   // List public challenge descriptions
-  router.get("/challenges", (req, res) => {
+  router.get("/api/challenges", (req, res) => {
     const list = CHALLENGES.map(c => ({
       id: c.id,
       title: c.title,

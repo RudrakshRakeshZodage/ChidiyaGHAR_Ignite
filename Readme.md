@@ -157,12 +157,41 @@ Under **Environment Variables**, add the following key-value pairs:
 
 ---
 
+## 🤖 Anti-Sleep / Keep-Alive Robot Setup (Prevent Render from Sleeping)
+
+Render's free tier spins down services after 15 minutes of inactivity. To keep your multiplayer game backend running 24/7 with zero cold starts, use any of the free uptime pingers below:
+
+### Option A: Free UptimeRobot Setup (Recommended)
+1. Go to [uptimerobot.com](https://uptimerobot.com/) and create a free account.
+2. Click **"+ Add New Monitor"**.
+3. **Monitor Type**: `HTTP(s)`
+4. **Friendly Name**: `Code Mafia Backend`
+5. **URL (or IP)**: `https://your-backend.onrender.com/ping` (or `/health`)
+6. **Monitoring Interval**: `Every 5 minutes`
+7. Click **"Create Monitor"**.
+8. UptimeRobot will ping your backend every 5 minutes, preventing Render from ever falling asleep!
+
+### Option B: Free Cron-job.org Setup
+1. Go to [cron-job.org](https://cron-job.org/) and sign up.
+2. Click **"Create Cronjob"**.
+3. **Title**: `Keep Code Mafia Awake`
+4. **URL**: `https://your-backend.onrender.com/ping`
+5. **Execution Schedule**: `Every 5 or 10 minutes`
+6. Click **"Save"**.
+
+### Option C: Built-in Self-Pinger (Zero Config)
+- The backend automatically detects the `RENDER_EXTERNAL_URL` environment variable provided by Render. If present, it will automatically ping itself every 10 minutes in the background!
+
+---
+
 ## 🌐 API & WebSocket Documentation
 
 ### REST Endpoints
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/health` | Health check endpoint for uptime monitors |
+| `GET/HEAD` | `/ping` | Lightweight fast 200 "pong" for anti-sleep robots |
+| `GET/HEAD` | `/health` | Health & uptime JSON check for monitors |
+| `GET` | `/keep-alive` | Status, uptime hours, active rooms, & ping counter |
 | `GET` | `/api/status` | Active room stats & server status |
 | `GET` | `/api/challenges` | Catalog of debugging challenges (public metadata) |
 | `POST` | `/api/auth/signup` | Register a new user with email & password |
