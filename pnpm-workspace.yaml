@@ -4,3 +4,5 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+  - '@rollup/rollup-linux-x64-gnu'
+  - '@rollup/rollup-linux-x64-musl'

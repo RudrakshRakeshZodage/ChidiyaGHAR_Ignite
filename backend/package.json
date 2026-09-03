@@ -9,11 +9,6 @@
     "dev": "nodemon src/server.js",
     "test": "node --test"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
   "keywords": [
     "multiplayer",
     "collaborative-coding",
