@@ -6,7 +6,10 @@ export default function Navbar({
   player,
   timeRemainingSeconds,
   onCallMeeting,
-  canCallMeeting
+  canCallMeeting,
+  authUser,
+  onOpenAuth,
+  onLogout
 }) {
   const [copied, setCopied] = React.useState(false);
 
@@ -88,29 +91,38 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Right: Player Profile / Role Indicator */}
-      {player && (
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-800">
-            <span className="text-xl select-none">{player.avatar || "👨‍💻"}</span>
-            <div className="text-left hidden sm:block">
-              <div className="text-xs font-semibold text-slate-200 flex items-center space-x-1">
-                <span>{player.name}</span>
-                {player.isHost && <span className="text-[10px] text-amber-400 font-normal">(Host)</span>}
-              </div>
-              {player.role ? (
-                <div className={`text-[10px] font-bold uppercase tracking-wider ${
-                  player.role === "MAFIA" ? "text-rose-400" : "text-emerald-400"
-                }`}>
-                  {player.role === "MAFIA" ? "🕵️ Code Mafia" : "⚡ Developer"}
+      {/* Right: Player Profile / Auth Status */}
+      <div className="flex items-center space-x-2 sm:space-x-3">
+        {authUser ? (
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-800">
+              <span className="text-lg select-none">{authUser.avatar || "👨‍💻"}</span>
+              <div className="text-left hidden sm:block">
+                <div className="text-xs font-semibold text-slate-200">
+                  {authUser.username || authUser.email?.split("@")[0]}
                 </div>
-              ) : (
-                <span className="text-[10px] text-slate-500">In Lobby</span>
-              )}
+                <div className="text-[10px] text-slate-500 truncate max-w-[110px]">
+                  {authUser.email}
+                </div>
+              </div>
             </div>
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 transition text-xs"
+            >
+              Sign Out
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <button
+            onClick={onOpenAuth}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-600/20 transition active:scale-95 flex items-center space-x-1.5"
+          >
+            <span>Sign In / Sign Up</span>
+          </button>
+        )}
+      </div>
     </header>
   );
 }

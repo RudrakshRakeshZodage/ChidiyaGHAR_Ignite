@@ -20,11 +20,12 @@ export default function Lobby({
   onToggleReady,
   room,
   player,
+  authUser,
   isConnecting
 }) {
   const [tab, setTab] = useState("create"); // 'create' | 'join'
-  const [nickname, setNickname] = useState(player?.name || "");
-  const [selectedAvatar, setSelectedAvatar] = useState(player?.avatar || "👨‍💻");
+  const [nickname, setNickname] = useState(authUser?.username || authUser?.email?.split("@")[0] || player?.name || "");
+  const [selectedAvatar, setSelectedAvatar] = useState(authUser?.avatar || player?.avatar || "👨‍💻");
   const [joinCode, setJoinCode] = useState("");
   
   // Game Settings (Host only)

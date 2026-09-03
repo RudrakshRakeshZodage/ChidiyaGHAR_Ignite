@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { socketService } from './services/socket';
 import { CHALLENGES } from './data/challenges';
+import { getStoredUser, logoutUser } from './services/auth';
 
 // Components
 import Navbar from './components/Navbar';
@@ -11,9 +12,12 @@ import TestRunner from './components/TestRunner';
 import ActivityFeed from './components/ActivityFeed';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
+import AuthModal from './components/AuthModal';
 import { Bug, Sparkles, AlertCircle, FileCode } from 'lucide-react';
 
 export default function App() {
+  const [authUser, setAuthUser] = useState(getStoredUser());
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [player, setPlayer] = useState(null);
   const [room, setRoom] = useState(null);
   const [code, setCode] = useState("");
@@ -308,6 +312,9 @@ export default function App() {
         timeRemainingSeconds={timeRemainingSeconds}
         onCallMeeting={handleCallMeeting}
         canCallMeeting={room?.status === "PLAYING"}
+        authUser={authUser}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onLogout={() => { logoutUser(); setAuthUser(null); }}
       />
 
       {/* Main Content */}
@@ -317,6 +324,7 @@ export default function App() {
           <Lobby
             room={room}
             player={player}
+            authUser={authUser}
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
             onStartGame={handleStartGame}
@@ -420,6 +428,13 @@ export default function App() {
           onPlayAgain={handlePlayAgain}
         />
       )}
+
+      {/* Authentication Modal (Sign In / Sign Up) */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={(u) => setAuthUser(u)}
+      />
     </div>
   );
 }
