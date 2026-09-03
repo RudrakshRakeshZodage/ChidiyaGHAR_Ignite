@@ -380,6 +380,15 @@ export class RoomManager {
       timestamp: Date.now()
     });
 
+    // Reset hasVoted and voteTarget flags for all players
+    for (const p of room.players.values()) {
+      p.hasVoted = false;
+      p.voteTarget = null;
+    }
+
+    // Always clear active meeting object
+    room.meeting = null;
+
     // Check Win/Loss conditions after ejection
     const remainingAlive = Array.from(room.players.values()).filter(p => p.isAlive);
     const aliveMafia = remainingAlive.filter(p => p.role === "MAFIA");
@@ -398,7 +407,6 @@ export class RoomManager {
     } else {
       // Resume playing
       room.status = GAME_STATES.PLAYING;
-      room.meeting = null;
     }
 
     return {

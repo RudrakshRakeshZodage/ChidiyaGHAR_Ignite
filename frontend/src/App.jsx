@@ -37,6 +37,7 @@ export default function App() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(null);
+  const [ejectionToast, setEjectionToast] = useState(null);
 
   // Real-time Voice Chat State
   const [isVoiceMuted, setIsVoiceMuted] = useState(true);
@@ -212,6 +213,24 @@ export default function App() {
         setIsRunningTests(false);
       });
 
+      // Emergency meeting ejection resolution
+      socket.on("meeting:ejection", ({ ejectedPlayer, votesSummary, winner, winReason }) => {
+        const text = ejectedPlayer
+          ? `🚨 ${ejectedPlayer.name} was voted out! (Role: ${ejectedPlayer.role})`
+          : "⚖️ Vote resulted in a Tie or Skip — No one was ejected!";
+        setEjectionToast(text);
+        setTimeout(() => setEjectionToast(null), 5000);
+
+        if (winner) {
+          setRoom(prev => prev ? {
+            ...prev,
+            status: "GAME_OVER",
+            winner,
+            winReason: winReason || (winner === "DEVELOPERS" ? "All Mafia eliminated!" : "Mafia gained majority!")
+          } : null);
+        }
+      });
+
       // 5-second Auto-Close Countdown when all other players leave
       socket.on("room:auto_closing", ({ countdownSeconds }) => {
         setAutoCloseCountdown(countdownSeconds || 5);
@@ -242,6 +261,7 @@ export default function App() {
         socket.off("chat:message");
         socket.off("game:timer_sync");
         socket.off("tests:completed");
+        socket.off("meeting:ejection");
         socket.off("room:auto_closing");
         socket.off("room:auto_close_cancelled");
         socket.off("room:force_exit");
@@ -582,6 +602,13 @@ export default function App() {
         <div className="sticky top-0 z-50 bg-gradient-to-r from-rose-950 via-red-900 to-rose-950 text-white py-2.5 px-4 text-center font-mono text-xs font-bold border-b border-rose-500 shadow-2xl flex items-center justify-center space-x-2 animate-pulse">
           <AlertCircle className="h-4 w-4 text-amber-400 animate-spin" />
           <span>⚠️ All other players have left! Room will auto-close and return to Lobby in {autoCloseCountdown}s...</span>
+        </div>
+      )}
+
+      {/* Emergency Meeting Ejection Toast */}
+      {ejectionToast && (
+        <div className="sticky top-0 z-50 bg-gradient-to-r from-purple-950 via-indigo-900 to-purple-950 text-white py-2.5 px-4 text-center font-mono text-xs font-extrabold border-b border-indigo-500 shadow-2xl flex items-center justify-center space-x-2 animate-fade-in">
+          <span>{ejectionToast}</span>
         </div>
       )}
 

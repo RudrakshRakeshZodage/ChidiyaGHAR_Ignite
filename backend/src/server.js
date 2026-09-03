@@ -284,7 +284,8 @@ io.on("connection", (socket) => {
   // 8. Emergency Meeting
   socket.on("meeting:call", (callback) => {
     if (!currentRoomCode || !currentPlayerId) return;
-    const res = roomManager.callEmergencyMeeting(currentRoomCode, currentPlayerId);
+    const roomCode = currentRoomCode;
+    const res = roomManager.callEmergencyMeeting(roomCode, currentPlayerId);
     if (res.error) {
       return callback?.({ success: false, error: res.error });
     }
@@ -292,38 +293,52 @@ io.on("connection", (socket) => {
     broadcastRoomState(res.room);
     callback?.({ success: true });
 
+    // Clear previous meeting timer
+    if (res.room._meetingTimer) clearTimeout(res.room._meetingTimer);
+
+    const durationSec = Number(res.room.settings?.votingDurationSeconds) || 45;
+
     // Auto-resolve voting when timer expires
-    setTimeout(() => {
-      const r = roomManager.getRoom(currentRoomCode);
+    res.room._meetingTimer = setTimeout(() => {
+      const r = roomManager.getRoom(roomCode);
       if (r && r.status === GAME_STATES.VOTING) {
-        const resolveRes = roomManager.resolveVoting(currentRoomCode);
+        const resolveRes = roomManager.resolveVoting(roomCode);
         if (resolveRes) {
-          io.to(currentRoomCode).emit("meeting:ejection", {
+          io.to(roomCode).emit("meeting:ejection", {
             ejectedPlayer: resolveRes.ejectedPlayer,
-            votesSummary: resolveRes.votesSummary
+            votesSummary: resolveRes.votesSummary,
+            winner: resolveRes.room.winner,
+            winReason: resolveRes.room.winReason
           });
           broadcastRoomState(resolveRes.room);
         }
       }
-    }, res.room.settings.votingDurationSeconds * 1000);
+    }, durationSec * 1000);
   });
 
   // 9. Cast Vote
   socket.on("vote:cast", ({ targetId }, callback) => {
     if (!currentRoomCode || !currentPlayerId) return;
-    const res = roomManager.castVote(currentRoomCode, currentPlayerId, targetId);
+    const roomCode = currentRoomCode;
+    const res = roomManager.castVote(roomCode, currentPlayerId, targetId);
     if (!res) return callback?.({ success: false });
 
     callback?.({ success: true });
     broadcastRoomState(res.room);
 
-    // If all alive players have voted, resolve immediately
+    // If all alive players have voted, resolve immediately and cancel timeout
     if (res.allVoted) {
-      const resolveRes = roomManager.resolveVoting(currentRoomCode);
+      if (res.room._meetingTimer) {
+        clearTimeout(res.room._meetingTimer);
+        res.room._meetingTimer = null;
+      }
+      const resolveRes = roomManager.resolveVoting(roomCode);
       if (resolveRes) {
-        io.to(currentRoomCode).emit("meeting:ejection", {
+        io.to(roomCode).emit("meeting:ejection", {
           ejectedPlayer: resolveRes.ejectedPlayer,
-          votesSummary: resolveRes.votesSummary
+          votesSummary: resolveRes.votesSummary,
+          winner: resolveRes.room.winner,
+          winReason: resolveRes.room.winReason
         });
         broadcastRoomState(resolveRes.room);
       }

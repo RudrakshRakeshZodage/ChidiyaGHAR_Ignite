@@ -19,13 +19,17 @@ export default function VotingModal({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
+          // Auto skip vote when timer expires if user hasn't voted yet
+          if (player?.isAlive && !player?.hasVoted && onCastVote) {
+            onCastVote("SKIP");
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [player?.isAlive, player?.hasVoted, onCastVote]);
 
   if (room?.status !== "VOTING") return null;
 
