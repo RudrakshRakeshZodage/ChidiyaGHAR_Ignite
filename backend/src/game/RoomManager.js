@@ -1,0 +1,405 @@
+import { v4 as uuidv4 } from "uuid";
+import { assignRoles } from "./RoleAssigner.js";
+import { CHALLENGES, getChallengeById } from "./challenges.js";
+import { runChallengeTests } from "./TestEngine.js";
+
+export const GAME_STATES = {
+  LOBBY: "LOBBY",
+  ROLE_REVEAL: "ROLE_REVEAL",
+  PLAYING: "PLAYING",
+  VOTING: "VOTING",
+  GAME_OVER: "GAME_OVER"
+};
+
+export class RoomManager {
+  constructor() {
+    this.rooms = new Map(); // roomId -> Room
+  }
+
+  generateRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  createRoom(hostPlayer, settings = {}) {
+    let roomCode = this.generateRoomCode();
+    while (this.rooms.has(roomCode)) {
+      roomCode = this.generateRoomCode();
+    }
+
+    const defaultChallenge = CHALLENGES[0];
+    const room = {
+      code: roomCode,
+      createdAt: Date.now(),
+      status: GAME_STATES.LOBBY,
+      hostId: hostPlayer.id,
+      settings: {
+        durationMinutes: settings.durationMinutes || 10,
+        mafiaCount: settings.mafiaCount || 1,
+        challengeId: settings.challengeId || defaultChallenge.id,
+        votingDurationSeconds: settings.votingDurationSeconds || 45
+      },
+      challenge: defaultChallenge,
+      currentCode: defaultChallenge.starterCode,
+      players: new Map(), // playerId -> player
+      activityLog: [
+        {
+          id: uuidv4(),
+          type: "ROOM_CREATED",
+          text: `Room ${roomCode} created by ${hostPlayer.name}`,
+          timestamp: Date.now()
+        }
+      ],
+      testResults: null,
+      meeting: null, // active emergency meeting info
+      winner: null,
+      winReason: null,
+      timer: null,
+      timeRemainingSeconds: 600
+    };
+
+    // Add host player
+    const host = {
+      id: hostPlayer.id,
+      socketId: hostPlayer.socketId,
+      name: hostPlayer.name,
+      avatar: hostPlayer.avatar || "👨‍💻",
+      isHost: true,
+      isReady: true,
+      isAlive: true,
+      role: null,
+      roleDetails: null
+    };
+
+    room.players.set(host.id, host);
+    this.rooms.set(roomCode, room);
+
+    return room;
+  }
+
+  getRoom(roomCode) {
+    return this.rooms.get(roomCode?.toUpperCase());
+  }
+
+  joinRoom(roomCode, player) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+    if (room.status !== GAME_STATES.LOBBY) return { error: "Game already in progress" };
+    if (room.players.size >= 8) return { error: "Room is full (max 8 players)" };
+
+    const newPlayer = {
+      id: player.id || uuidv4(),
+      socketId: player.socketId,
+      name: player.name,
+      avatar: player.avatar || "👩‍💻",
+      isHost: false,
+      isReady: false,
+      isAlive: true,
+      role: null,
+      roleDetails: null
+    };
+
+    room.players.set(newPlayer.id, newPlayer);
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "PLAYER_JOINED",
+      text: `${newPlayer.name} joined the lobby`,
+      timestamp: Date.now()
+    });
+
+    return { room, player: newPlayer };
+  }
+
+  leaveRoom(roomCode, playerId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return null;
+
+    const player = room.players.get(playerId);
+    if (!player) return null;
+
+    room.players.delete(playerId);
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "PLAYER_LEFT",
+      text: `${player.name} left the room`,
+      timestamp: Date.now()
+    });
+
+    // If host leaves, reassign host or delete room if empty
+    if (room.players.size === 0) {
+      if (room.timer) clearInterval(room.timer);
+      this.rooms.delete(roomCode);
+      return null;
+    }
+
+    if (player.isHost) {
+      const nextHost = room.players.values().next().value;
+      nextHost.isHost = true;
+      room.hostId = nextHost.id;
+    }
+
+    return room;
+  }
+
+  startGame(roomCode, hostId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+    if (room.hostId !== hostId) return { error: "Only the host can start the game" };
+
+    // Select challenge
+    const challenge = getChallengeById(room.settings.challengeId);
+    room.challenge = challenge;
+    room.currentCode = challenge.starterCode;
+
+    // Assign secret roles
+    const playerList = Array.from(room.players.values());
+    const assigned = assignRoles(playerList, room.settings.mafiaCount);
+    
+    assigned.forEach(p => {
+      room.players.set(p.id, p);
+    });
+
+    room.status = GAME_STATES.ROLE_REVEAL;
+    room.timeRemainingSeconds = room.settings.durationMinutes * 60;
+    
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "GAME_STARTED",
+      text: `Game commenced with ${playerList.length} players. Challenge: "${challenge.title}"`,
+      timestamp: Date.now()
+    });
+
+    return { room };
+  }
+
+  updateCode(roomCode, playerId, newCode) {
+    const room = this.getRoom(roomCode);
+    if (!room) return null;
+    const player = room.players.get(playerId);
+
+    room.currentCode = newCode;
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "CODE_EDIT",
+      playerName: player ? player.name : "Anonymous",
+      text: `${player ? player.name : "A player"} updated the codebase`,
+      timestamp: Date.now()
+    });
+
+    return room;
+  }
+
+  runTests(roomCode, playerId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return null;
+    const player = room.players.get(playerId);
+
+    const testResults = runChallengeTests(room.currentCode, room.challenge.testSuite);
+    room.testResults = testResults;
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "TESTS_RUN",
+      playerName: player ? player.name : "Player",
+      passed: testResults.allPassed,
+      text: `${player ? player.name : "Player"} executed test suite (${testResults.passedCount}/${testResults.totalCount} passing)`,
+      timestamp: Date.now()
+    });
+
+    // Check Developer Victory (all tests pass)
+    if (testResults.allPassed) {
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "DEVELOPERS";
+      room.winReason = "Developers successfully stabilized the application and passed 100% of the unit tests!";
+      if (room.timer) clearInterval(room.timer);
+    }
+
+    return { room, testResults };
+  }
+
+  callEmergencyMeeting(roomCode, callerId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+    if (room.status !== GAME_STATES.PLAYING) return { error: "Cannot call meeting right now" };
+
+    const caller = room.players.get(callerId);
+    if (!caller || !caller.isAlive) return { error: "Only alive players can call meetings" };
+
+    // Reset votes
+    for (const p of room.players.values()) {
+      p.hasVoted = false;
+      p.voteTarget = null;
+    }
+
+    room.status = GAME_STATES.VOTING;
+    room.meeting = {
+      callerId,
+      callerName: caller.name,
+      startedAt: Date.now(),
+      durationSeconds: room.settings.votingDurationSeconds,
+      votes: {} // targetId -> count
+    };
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "MEETING_CALLED",
+      text: `🚨 EMERGENCY MEETING called by ${caller.name}!`,
+      timestamp: Date.now()
+    });
+
+    return { room };
+  }
+
+  castVote(roomCode, voterId, targetId) {
+    const room = this.getRoom(roomCode);
+    if (!room || room.status !== GAME_STATES.VOTING) return null;
+
+    const voter = room.players.get(voterId);
+    if (!voter || !voter.isAlive || voter.hasVoted) return null;
+
+    voter.hasVoted = true;
+    voter.voteTarget = targetId; // targetId can be 'SKIP' or playerId
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "VOTE_CAST",
+      text: `${voter.name} cast their vote`,
+      timestamp: Date.now()
+    });
+
+    // Check if all alive players voted
+    const alivePlayers = Array.from(room.players.values()).filter(p => p.isAlive);
+    const allVoted = alivePlayers.every(p => p.hasVoted);
+
+    return { room, allVoted };
+  }
+
+  resolveVoting(roomCode) {
+    const room = this.getRoom(roomCode);
+    if (!room || room.status !== GAME_STATES.VOTING) return null;
+
+    const votes = new Map(); // targetId -> count
+    const alivePlayers = Array.from(room.players.values()).filter(p => p.isAlive);
+
+    for (const p of alivePlayers) {
+      const target = p.voteTarget || "SKIP";
+      votes.set(target, (votes.get(target) || 0) + 1);
+    }
+
+    // Determine highest vote
+    let highestVote = 0;
+    let ejectedTarget = null;
+    let isTie = false;
+
+    for (const [target, count] of votes.entries()) {
+      if (count > highestVote) {
+        highestVote = count;
+        ejectedTarget = target;
+        isTie = false;
+      } else if (count === highestVote) {
+        isTie = true;
+      }
+    }
+
+    let ejectedPlayer = null;
+    if (!isTie && ejectedTarget && ejectedTarget !== "SKIP") {
+      ejectedPlayer = room.players.get(ejectedTarget);
+      if (ejectedPlayer) {
+        ejectedPlayer.isAlive = false;
+      }
+    }
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "VOTE_RESOLVED",
+      text: ejectedPlayer
+        ? `${ejectedPlayer.name} was ejected! (Role: ${ejectedPlayer.role})`
+        : "No one was ejected (Tie or Skipped).",
+      timestamp: Date.now()
+    });
+
+    // Check Win/Loss conditions after ejection
+    const remainingAlive = Array.from(room.players.values()).filter(p => p.isAlive);
+    const aliveMafia = remainingAlive.filter(p => p.role === "MAFIA");
+    const aliveDevs = remainingAlive.filter(p => p.role === "DEVELOPER");
+
+    if (aliveMafia.length === 0) {
+      // Developers win: All Mafia eliminated
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "DEVELOPERS";
+      room.winReason = "All Code Mafia saboteurs were identified and ejected from the team!";
+    } else if (aliveMafia.length >= aliveDevs.length) {
+      // Mafia wins: Mafia parity or majority
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "MAFIA";
+      room.winReason = "Code Mafia gained parity over the development team!";
+    } else {
+      // Resume playing
+      room.status = GAME_STATES.PLAYING;
+      room.meeting = null;
+    }
+
+    return {
+      room,
+      ejectedPlayer: ejectedPlayer ? {
+        id: ejectedPlayer.id,
+        name: ejectedPlayer.name,
+        role: ejectedPlayer.role
+      } : null,
+      votesSummary: Object.fromEntries(votes)
+    };
+  }
+
+  // Sanitize room data for a specific player (hides other players' secret roles unless game over)
+  sanitizeRoomForPlayer(room, playerId) {
+    if (!room) return null;
+    const isGameOver = room.status === GAME_STATES.GAME_OVER;
+
+    const playersObj = {};
+    for (const [id, player] of room.players.entries()) {
+      const isSelf = id === playerId;
+      playersObj[id] = {
+        id: player.id,
+        name: player.name,
+        avatar: player.avatar,
+        isHost: player.isHost,
+        isReady: player.isReady,
+        isAlive: player.isAlive,
+        hasVoted: player.hasVoted,
+        // Only reveal secret role if it's the player themselves or if the game is over
+        role: (isSelf || isGameOver) ? player.role : null,
+        roleDetails: (isSelf || isGameOver) ? player.roleDetails : null
+      };
+    }
+
+    return {
+      code: room.code,
+      status: room.status,
+      hostId: room.hostId,
+      settings: room.settings,
+      challenge: {
+        id: room.challenge.id,
+        title: room.challenge.title,
+        category: room.challenge.category,
+        difficulty: room.challenge.difficulty,
+        description: room.challenge.description,
+        bugsCount: room.challenge.bugsCount,
+        devGoal: room.challenge.devGoal,
+        mafiaGoal: room.challenge.mafiaGoal,
+        testSuite: room.challenge.testSuite.map(t => ({ id: t.id, name: t.name }))
+      },
+      currentCode: room.currentCode,
+      players: playersObj,
+      activityLog: room.activityLog.slice(-50),
+      testResults: room.testResults,
+      meeting: room.meeting,
+      winner: room.winner,
+      winReason: room.winReason,
+      timeRemainingSeconds: room.timeRemainingSeconds
+    };
+  }
+}

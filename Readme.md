@@ -1,172 +1,116 @@
-# 🕵️‍♂️ Code Mafia Frontend: Multiplayer Collaborative Debugging
+# Code Mafia (ChidiyaGHAR Ignite) 🕵️‍♂️💻
 
-Sleek Cyberpunk/Noir Mafia multiplayer web application built with **React 18**, **Vite 6**, **Tailwind CSS**, **Lucide Icons**, **Supabase**, and **Socket.IO**.
-
----
-
-## 📋 Table of Contents
-1. [Prerequisites](#-prerequisites)
-2. [Setup on a Brand New System (Step-by-Step Terminal Commands)](#-setup-on-a-brand-new-system-step-by-step-terminal-commands)
-3. [Running Locally](#-running-locally)
-4. [Environment Variables](#-environment-variables)
-5. [Step-by-Step Deployment to Vercel](#-step-by-step-deployment-to-vercel)
-6. [Project Structure](#-project-structure)
+> A real-time collaborative coding and social deduction multiplayer web game where developers solve algorithmic bugs while identifying the undercover Saboteur among them.
 
 ---
 
-## ⚡ Prerequisites
-Ensure you have the following installed on your machine:
-- **Node.js** (v18.0.0 or higher) → [Download Node.js](https://nodejs.org/)
-- **Git** → [Download Git](https://git-scm.com/)
-- **PNPM** package manager
+## 📂 Repository Structure
 
----
+This repository is organized as a monorepo containing both the Frontend client application and Backend real-time execution server:
 
-## 💻 Setup on a Brand New System (Step-by-Step Terminal Commands)
-
-Run the following commands in your terminal (PowerShell, Command Prompt, or Bash):
-
-### Step 1: Clone the Repository & Checkout Frontend Branch
-```bash
-# Clone the repository
-git clone https://github.com/RudrakshRakeshZodage/ChidiyaGHAR_Ignite.git
-
-# Navigate into the project directory
-cd ChidiyaGHAR_Ignite
-
-# Checkout the Frontend branch
-git checkout Frontend
+```
+ChidiyaGHAR_Ignite/
+├── frontend/                 # Vite + React client application
+│   ├── src/
+│   │   ├── components/       # UI modals, CodeEditor, TestRunner, Lobby, etc.
+│   │   ├── services/         # Socket.io, Supabase auth client
+│   │   ├── data/             # Challenge bank
+│   │   ├── App.jsx           # Main orchestrator component
+│   │   └── main.jsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── vercel.json
+│   └── Readme.md             # Frontend-specific documentation
+│
+├── backend/                  # Node.js + Express + Socket.io game server
+│   ├── src/
+│   │   ├── db/               # Supabase database client
+│   │   ├── game/             # RoomManager, RoleAssigner, TestEngine, challenges
+│   │   ├── routes/           # REST APIs (auth, health, keep-alive)
+│   │   └── server.js         # Entrypoint with real-time socket handlers
+│   ├── test/                 # Automated unit and integration test suite
+│   ├── package.json
+│   ├── Procfile              # Render / Heroku process configuration
+│   └── Readme.md             # Backend-specific documentation
+│
+├── supabase_schema.sql       # Database schema & RLS policies for Supabase
+├── pnpm-workspace.yaml       # Workspace definition for pnpm
+├── package.json              # Root workspace scripts
+└── Readme.md                 # Project documentation (this file)
 ```
 
-### Step 2: Install PNPM (if not already installed)
-```bash
-# Install PNPM globally via npm
-npm install -g pnpm
+---
 
-# Verify PNPM installation
-pnpm -v
-```
+## ⚡ Quickstart (Local Development)
 
-### Step 3: Install Project Dependencies
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or later
+- **pnpm**: `npm install -g pnpm`
+- **Supabase Account**: (or local Supabase instance)
+
+### 2. Install Dependencies
+Run from the root directory to install all packages across workspaces:
 ```bash
-# Install dependencies using pnpm
 pnpm install
 ```
 
-### Step 4: Configure Environment Variables
-```bash
-# Copy example environment file
-cp .env.example .env
-```
-*(Or on Windows PowerShell: `Copy-Item .env.example .env`)*
+### 3. Database Setup (Supabase)
+1. Open your Supabase project dashboard -> **SQL Editor**.
+2. Run the script provided in [`supabase_schema.sql`](file:///d:/Rudraksh/College/app/ChidiyaGHAR_Ignite/supabase_schema.sql).
+3. The script creates the `users` and `games` tables, triggers for auto-updating timestamps, and Row-Level Security (RLS) policies.
 
-Your `.env` will contain:
+### 4. Configure Environment Variables
+
+**Backend (`backend/.env`):**
+```env
+PORT=5000
+CLIENT_URL=http://localhost:5173
+SUPABASE_URL=https://<your-project-id>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+
+**Frontend (`frontend/.env`):**
 ```env
 VITE_BACKEND_URL=http://localhost:5000
-VITE_SUPABASE_URL=https://msgjuazmayoimjjaatmh.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh
+VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-publishable-key>
 ```
 
----
+### 5. Running the Application
 
-## 🚀 Running Locally
-
-### Development Server
-```bash
-# Start local development server with hot reload
-pnpm run dev
-```
-Open your browser and navigate to **`http://localhost:3000`** (or the URL shown in terminal).
-
-### Production Build & Preview
-```bash
-# Build the production bundle
-pnpm run build
-
-# Preview the production build locally
-pnpm run preview
-```
-
----
-
-## ☁️ Step-by-Step Deployment to Vercel
-
-Follow these exact steps to deploy the frontend on [Vercel](https://vercel.com):
-
-### Method A: Deploy via Vercel Web Dashboard (Recommended)
-
-1. **Push your latest changes to GitHub**:
-   ```bash
-   git add .
-   git commit -m "feat: ready for vercel deployment"
-   git push origin Frontend
-   ```
-2. **Log into Vercel**:
-   - Go to [vercel.com](https://vercel.com) and sign in with your GitHub account.
-3. **Import Project**:
-   - Click **"Add New..."** → **"Project"**.
-   - Select the repository `RudrakshRakeshZodage/ChidiyaGHAR_Ignite`.
-4. **Configure Project Settings**:
-   - **Framework Preset**: `Vite`
-   - **Root Directory**: `./` (leave default)
-   - **Git Branch**: Select `Frontend`
-   - **Build Command**: `pnpm run build`
-   - **Output Directory**: `dist`
-   - **Install Command**: `pnpm install`
-5. **Add Environment Variables**:
-   Under **Environment Variables**, add:
-   | Variable Name | Value |
-   |---|---|
-   | `VITE_BACKEND_URL` | `https://your-backend-app.onrender.com` *(use your deployed Render backend URL)* |
-   | `VITE_SUPABASE_URL` | `https://msgjuazmayoimjjaatmh.supabase.co` |
-   | `VITE_SUPABASE_ANON_KEY` | `sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh` |
-6. **Deploy**:
-   - Click **"Deploy"**.
-   - Vercel will build and assign you a live URL (e.g. `https://chidiya-ghar-ignite-frontend.vercel.app`).
-
----
-
-### Method B: Deploy via Vercel CLI
+You can run both or either service using root workspace commands:
 
 ```bash
-# Install Vercel CLI globally
-npm install -g vercel
+# Run both Frontend & Backend concurrently
+pnpm dev
 
-# Log in to Vercel
-vercel login
-
-# Deploy to Vercel (Production)
-vercel --prod
+# Or run services individually:
+pnpm dev:backend   # Starts Node.js backend on port 5000
+pnpm dev:frontend  # Starts Vite React frontend on port 5173
 ```
 
 ---
 
-## 📁 Project Structure
+## 🧪 Testing
 
+Run the backend test suite:
+```bash
+pnpm test:backend
 ```
-ChidiyaGHAR_Ignite (Frontend Branch)
-├── public/                 # Static assets & icons
-├── src/
-│   ├── components/
-│   │   ├── ActivityFeed.jsx   # Live git-like audit log
-│   │   ├── CodeEditor.jsx     # Real-time collaborative code editor
-│   │   ├── GameOverModal.jsx  # Win/Loss & identity unmasking screen
-│   │   ├── Lobby.jsx          # Room creation, joining & match settings
-│   │   ├── Navbar.jsx         # Header, room code copy, game timer & meeting button
-│   │   ├── RoleModal.jsx      # Secret role reveal animation (Dev vs Mafia)
-│   │   ├── TestRunner.jsx     # Automated test suite execution & assertions
-│   │   └── VotingModal.jsx    # Emergency meeting & player ejection voting
-│   ├── data/
-│   │   └── challenges.js      # Debugging challenges & test suites
-│   ├── services/
-│   │   ├── socket.js          # Socket.IO real-time manager
-│   │   └── supabase.js        # Supabase client integration
-│   ├── App.jsx                # Master game state router & controller
-│   ├── index.css              # Cyber Mafia noir design tokens & glow animations
-│   └── main.jsx               # React DOM root mounting
-├── .env.example               # Environment variables template
-├── package.json               # Dependencies & build scripts
-├── tailwind.config.js         # Tailwind theme customizations
-├── vercel.json                # Single-page app routing rules for Vercel
-└── vite.config.js             # Vite configuration
+Or directly inside `backend/`:
+```bash
+cd backend && node --test
 ```
+
+---
+
+## 🚀 Deployment
+
+- **Frontend**: Deploy `frontend/` directory to **Vercel** with build command `pnpm build` and output directory `dist`. See [`frontend/Readme.md`](file:///d:/Rudraksh/College/app/ChidiyaGHAR_Ignite/frontend/Readme.md) for step-by-step instructions.
+- **Backend**: Deploy `backend/` directory to **Render** / **Railway** as a Web Service using `pnpm start`. See [`backend/Readme.md`](file:///d:/Rudraksh/College/app/ChidiyaGHAR_Ignite/backend/Readme.md) for anti-sleep and environment configurations.
+
+---
+
+## 👥 Authors & Acknowledgements
+Built by the **ChidiyaGHAR Ignite** team.
