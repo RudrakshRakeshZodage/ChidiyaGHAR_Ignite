@@ -346,21 +346,27 @@ io.on("connection", (socket) => {
   });
 
   // 10. In-Game & Meeting Chat Message
-  socket.on("chat:send", ({ message }) => {
-    if (!currentRoomCode || !currentPlayerId || !message?.trim()) return;
-    const room = roomManager.getRoom(currentRoomCode);
+  socket.on("chat:send", (payload) => {
+    const rawMsg = typeof payload === "string" ? payload : payload?.message;
+    const rCode = payload?.roomCode || currentRoomCode;
+    const pId = payload?.senderId || currentPlayerId;
+    if (!rCode || !pId || !rawMsg?.trim()) return;
+
+    if (!socket.rooms.has(rCode)) socket.join(rCode);
+    currentRoomCode = rCode;
+    currentPlayerId = pId;
+
+    const room = roomManager.getRoom(rCode);
     if (!room) return;
 
-    const sender = room.players.get(currentPlayerId);
-    if (!sender) return;
-
+    const sender = room.players.get(pId);
     const chatMsg = {
       id: "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
-      senderId: sender.id,
-      senderName: sender.name,
-      senderAvatar: sender.avatar,
-      isAlive: sender.isAlive,
-      message: message.trim(),
+      senderId: pId,
+      senderName: sender?.name || payload?.senderName || "Player",
+      senderAvatar: sender?.avatar || payload?.senderAvatar || "👨‍💻",
+      isAlive: sender?.isAlive ?? true,
+      message: rawMsg.trim(),
       timestamp: Date.now()
     };
 
@@ -368,66 +374,93 @@ io.on("connection", (socket) => {
     room.chatMessages.push(chatMsg);
     if (room.chatMessages.length > 100) room.chatMessages.shift();
 
-    io.to(currentRoomCode).emit("chat:message", chatMsg);
+    io.to(rCode).emit("chat:message", chatMsg);
   });
 
   // 11. Real-time Low-Latency Voice Chat Signaling & Audio Relay
-  socket.on("voice:join_room", () => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    socket.to(currentRoomCode).emit("voice:user_joined", { playerId: currentPlayerId });
+  socket.on("voice:join_room", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const pId = payload?.playerId || currentPlayerId;
+    if (!rCode) return;
+    if (!socket.rooms.has(rCode)) socket.join(rCode);
+    currentRoomCode = rCode;
+    if (pId) currentPlayerId = pId;
+
+    socket.to(rCode).emit("voice:user_joined", { playerId: pId });
   });
 
-  socket.on("voice:state_change", ({ isMuted, isSpeaking }) => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    socket.to(currentRoomCode).emit("voice:peer_state", {
-      playerId: currentPlayerId,
-      isMuted,
-      isSpeaking
+  socket.on("voice:state_change", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const pId = payload?.playerId || currentPlayerId;
+    if (!rCode) return;
+    socket.to(rCode).emit("voice:peer_state", {
+      playerId: pId,
+      isMuted: payload?.isMuted,
+      isSpeaking: payload?.isSpeaking
     });
   });
 
   // WebRTC P2P Mesh Signaling
-  socket.on("voice:webrtc_offer", ({ targetId, offer }) => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    const room = roomManager.getRoom(currentRoomCode);
+  socket.on("voice:webrtc_offer", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const sId = payload?.senderId || currentPlayerId;
+    const targetId = payload?.targetId;
+    const offer = payload?.offer;
+    if (!rCode) return;
+
+    const room = roomManager.getRoom(rCode);
     const target = room?.players.get(targetId);
     if (target?.socketId) {
       io.to(target.socketId).emit("voice:webrtc_offer", {
-        senderId: currentPlayerId,
+        senderId: sId,
         offer
       });
     }
   });
 
-  socket.on("voice:webrtc_answer", ({ targetId, answer }) => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    const room = roomManager.getRoom(currentRoomCode);
+  socket.on("voice:webrtc_answer", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const sId = payload?.senderId || currentPlayerId;
+    const targetId = payload?.targetId;
+    const answer = payload?.answer;
+    if (!rCode) return;
+
+    const room = roomManager.getRoom(rCode);
     const target = room?.players.get(targetId);
     if (target?.socketId) {
       io.to(target.socketId).emit("voice:webrtc_answer", {
-        senderId: currentPlayerId,
+        senderId: sId,
         answer
       });
     }
   });
 
-  socket.on("voice:webrtc_ice", ({ targetId, candidate }) => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    const room = roomManager.getRoom(currentRoomCode);
+  socket.on("voice:webrtc_ice", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const sId = payload?.senderId || currentPlayerId;
+    const targetId = payload?.targetId;
+    const candidate = payload?.candidate;
+    if (!rCode) return;
+
+    const room = roomManager.getRoom(rCode);
     const target = room?.players.get(targetId);
     if (target?.socketId) {
       io.to(target.socketId).emit("voice:webrtc_ice", {
-        senderId: currentPlayerId,
+        senderId: sId,
         candidate
       });
     }
   });
 
   // Low-latency binary PCM audio buffer broadcast fallback
-  socket.on("voice:audio_chunk", (audioData) => {
-    if (!currentRoomCode || !currentPlayerId) return;
-    socket.to(currentRoomCode).emit("voice:audio_chunk", {
-      senderId: currentPlayerId,
+  socket.on("voice:audio_chunk", (payload) => {
+    const rCode = payload?.roomCode || currentRoomCode;
+    const sId = payload?.senderId || currentPlayerId;
+    const audioData = payload?.audioData || payload;
+    if (!rCode) return;
+
+    socket.to(rCode).emit("voice:audio_chunk", {
+      senderId: sId,
       audioData
     });
   });

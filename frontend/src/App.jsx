@@ -270,18 +270,22 @@ export default function App() {
     };
   }, [player?.role, room?.players]);
 
-  // Sync current player state from room
+  // Sync current player state from room & voice session
   useEffect(() => {
     if (room && player) {
+      voiceService.setSession(room.code, player.id);
       const updatedMe = room.players[player.id];
       if (updatedMe) {
         setPlayer(prev => ({ ...prev, ...updatedMe }));
       }
     }
-  }, [room]);
+  }, [room, player?.id]);
 
   // Handle Voice Toggle
   const handleToggleVoiceMute = async () => {
+    if (room && player) {
+      voiceService.setSession(room.code, player.id);
+    }
     await voiceService.toggleMute();
   };
 
@@ -467,7 +471,13 @@ export default function App() {
     if (!text?.trim()) return;
     const socket = socketService.getSocket();
     if (socket && socket.connected) {
-      socket.emit("chat:send", { message: text });
+      socket.emit("chat:send", {
+        message: text.trim(),
+        roomCode: room?.code,
+        senderId: player?.id,
+        senderName: player?.name,
+        senderAvatar: player?.avatar
+      });
     } else {
       // Local fallback simulator
       const localMsg = {
@@ -476,7 +486,7 @@ export default function App() {
         senderName: player?.name || "You",
         senderAvatar: player?.avatar || "👨‍💻",
         isAlive: player?.isAlive ?? true,
-        message: text,
+        message: text.trim(),
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, localMsg]);
