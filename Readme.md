@@ -1,66 +1,172 @@
 # 🕵️‍♂️ Code Mafia Frontend: Multiplayer Collaborative Debugging
 
-Sleek Cyberpunk/Noir Mafia multiplayer web application built with React 18, Vite, Tailwind CSS, Lucide Icons, and Socket.IO for **Code Mafia**.
+Sleek Cyberpunk/Noir Mafia multiplayer web application built with **React 18**, **Vite 6**, **Tailwind CSS**, **Lucide Icons**, **Supabase**, and **Socket.IO**.
 
 ---
 
-## 🎯 Features Implemented
-- **Mission Lobby & Squad Assembly**: Nickname customization, 8 cyberpunk/hacker avatars, room code sharing, and match settings.
-- **Dramatic Secret Role Reveal**: High-suspense modal revealing secret role (**Developer** vs **Code Mafia**) with secret sabotage/debugging protocols.
-- **Real-time Collaborative Code Workspace**: Split-pane live code editor with line gutter, active collaborator indicators, and syntax handling.
-- **Automated Test Runner**: Real-time pass/fail progress bar, test duration metrics, and detailed error assertion inspection.
-- **Player Activity & Audit Feed**: Git-like commit and test log capturing developer edits to spot the saboteur.
-- **Emergency Meetings & Voting**: Democratic voting round with countdown timer, suspect cards, and dramatic ejection sequence.
-- **Victory / Defeat Screen**: Winner celebration with confetti, identity unmasking, and return to lobby.
-- **Built-in Offline Mode**: Playable with standalone interactive simulation or connected to live Socket.IO backend.
+## 📋 Table of Contents
+1. [Prerequisites](#-prerequisites)
+2. [Setup on a Brand New System (Step-by-Step Terminal Commands)](#-setup-on-a-brand-new-system-step-by-step-terminal-commands)
+3. [Running Locally](#-running-locally)
+4. [Environment Variables](#-environment-variables)
+5. [Step-by-Step Deployment to Vercel](#-step-by-step-deployment-to-vercel)
+6. [Project Structure](#-project-structure)
 
 ---
 
-## 🚀 Getting Started with PNPM
+## ⚡ Prerequisites
+Ensure you have the following installed on your machine:
+- **Node.js** (v18.0.0 or higher) → [Download Node.js](https://nodejs.org/)
+- **Git** → [Download Git](https://git-scm.com/)
+- **PNPM** package manager
 
-### Prerequisites
-- Node.js >= 18
-- pnpm (`npx pnpm` or `npm install -g pnpm`)
+---
 
-### Installation & Execution
+## 💻 Setup on a Brand New System (Step-by-Step Terminal Commands)
+
+Run the following commands in your terminal (PowerShell, Command Prompt, or Bash):
+
+### Step 1: Clone the Repository & Checkout Frontend Branch
 ```bash
-# 1. Install dependencies with pnpm
+# Clone the repository
+git clone https://github.com/RudrakshRakeshZodage/ChidiyaGHAR_Ignite.git
+
+# Navigate into the project directory
+cd ChidiyaGHAR_Ignite
+
+# Checkout the Frontend branch
+git checkout Frontend
+```
+
+### Step 2: Install PNPM (if not already installed)
+```bash
+# Install PNPM globally via npm
+npm install -g pnpm
+
+# Verify PNPM installation
+pnpm -v
+```
+
+### Step 3: Install Project Dependencies
+```bash
+# Install dependencies using pnpm
 pnpm install
+```
 
-# 2. Start Vite development server
+### Step 4: Configure Environment Variables
+```bash
+# Copy example environment file
+cp .env.example .env
+```
+*(Or on Windows PowerShell: `Copy-Item .env.example .env`)*
+
+Your `.env` will contain:
+```env
+VITE_BACKEND_URL=http://localhost:5000
+VITE_SUPABASE_URL=https://msgjuazmayoimjjaatmh.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh
+```
+
+---
+
+## 🚀 Running Locally
+
+### Development Server
+```bash
+# Start local development server with hot reload
 pnpm run dev
+```
+Open your browser and navigate to **`http://localhost:3000`** (or the URL shown in terminal).
 
-# 3. Build for production
+### Production Build & Preview
+```bash
+# Build the production bundle
 pnpm run build
 
-# 4. Preview production build locally
+# Preview the production build locally
 pnpm run preview
 ```
 
 ---
 
-## ⚙️ Environment Variables
-Create a `.env` file in the root:
-```env
-# URL to your deployed or local Code Mafia backend
-VITE_BACKEND_URL=http://localhost:5000
+## ☁️ Step-by-Step Deployment to Vercel
+
+Follow these exact steps to deploy the frontend on [Vercel](https://vercel.com):
+
+### Method A: Deploy via Vercel Web Dashboard (Recommended)
+
+1. **Push your latest changes to GitHub**:
+   ```bash
+   git add .
+   git commit -m "feat: ready for vercel deployment"
+   git push origin Frontend
+   ```
+2. **Log into Vercel**:
+   - Go to [vercel.com](https://vercel.com) and sign in with your GitHub account.
+3. **Import Project**:
+   - Click **"Add New..."** → **"Project"**.
+   - Select the repository `RudrakshRakeshZodage/ChidiyaGHAR_Ignite`.
+4. **Configure Project Settings**:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `./` (leave default)
+   - **Git Branch**: Select `Frontend`
+   - **Build Command**: `pnpm run build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `pnpm install`
+5. **Add Environment Variables**:
+   Under **Environment Variables**, add:
+   | Variable Name | Value |
+   |---|---|
+   | `VITE_BACKEND_URL` | `https://your-backend-app.onrender.com` *(use your deployed Render backend URL)* |
+   | `VITE_SUPABASE_URL` | `https://msgjuazmayoimjjaatmh.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | `sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh` |
+6. **Deploy**:
+   - Click **"Deploy"**.
+   - Vercel will build and assign you a live URL (e.g. `https://chidiya-ghar-ignite-frontend.vercel.app`).
+
+---
+
+### Method B: Deploy via Vercel CLI
+
+```bash
+# Install Vercel CLI globally
+npm install -g vercel
+
+# Log in to Vercel
+vercel login
+
+# Deploy to Vercel (Production)
+vercel --prod
 ```
 
 ---
 
-## ☁️ Deployment Guide
+## 📁 Project Structure
 
-### Deploy to Vercel
-1. Import this repository into [Vercel](https://vercel.com).
-2. Set the Git Branch to **`Frontend`**.
-3. **Framework Preset**: Vite
-4. **Install Command**: `pnpm install`
-5. **Build Command**: `pnpm run build`
-6. **Output Directory**: `dist`
-7. **Environment Variable**: `VITE_BACKEND_URL` = `<your-backend-render-url>`
-
-### Deploy to Netlify
-1. Import this repository into [Netlify](https://netlify.com).
-2. Set branch to **`Frontend`**.
-3. **Build Command**: `pnpm run build`
-4. **Publish directory**: `dist`
+```
+ChidiyaGHAR_Ignite (Frontend Branch)
+├── public/                 # Static assets & icons
+├── src/
+│   ├── components/
+│   │   ├── ActivityFeed.jsx   # Live git-like audit log
+│   │   ├── CodeEditor.jsx     # Real-time collaborative code editor
+│   │   ├── GameOverModal.jsx  # Win/Loss & identity unmasking screen
+│   │   ├── Lobby.jsx          # Room creation, joining & match settings
+│   │   ├── Navbar.jsx         # Header, room code copy, game timer & meeting button
+│   │   ├── RoleModal.jsx      # Secret role reveal animation (Dev vs Mafia)
+│   │   ├── TestRunner.jsx     # Automated test suite execution & assertions
+│   │   └── VotingModal.jsx    # Emergency meeting & player ejection voting
+│   ├── data/
+│   │   └── challenges.js      # Debugging challenges & test suites
+│   ├── services/
+│   │   ├── socket.js          # Socket.IO real-time manager
+│   │   └── supabase.js        # Supabase client integration
+│   ├── App.jsx                # Master game state router & controller
+│   ├── index.css              # Cyber Mafia noir design tokens & glow animations
+│   └── main.jsx               # React DOM root mounting
+├── .env.example               # Environment variables template
+├── package.json               # Dependencies & build scripts
+├── tailwind.config.js         # Tailwind theme customizations
+├── vercel.json                # Single-page app routing rules for Vercel
+└── vite.config.js             # Vite configuration
+```
