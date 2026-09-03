@@ -763,6 +763,7 @@ export default function App() {
         onClose={() => setShowLeaderboardModal(false)}
         player={player}
         authUser={authUser}
+        room={room}
       />
 
       {/* Secret Role Reveal Modal */}
