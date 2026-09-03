@@ -1,6 +1,11 @@
 /**
- * Ultra Low-Latency Real-Time Voice Service for Code Mafia
- * Combines direct WebRTC P2P Mesh (< 40ms latency) with low-latency binary PCM socket audio relay fallback.
+ * Ultra Low-Latency Real-Time Voice Service with Advanced Noise Cancellation
+ * Features:
+ * - Browser DSP Hardware Noise Suppression + Echo Cancellation + Auto Gain Control
+ * - Web Audio API Highpass & Bandpass Voice Clarity Filtering
+ * - Adaptive Voice-Activity Noise Gate (VAD) to eliminate background hum & keyboard noise
+ * - Anti-Feedback protection to prevent mic loopback echo
+ * - Direct WebRTC P2P Mesh with smart deduplication against socket relay
  */
 
 import { socketService } from './socket';
@@ -16,17 +21,25 @@ const ICE_SERVERS = {
 class VoiceService {
   constructor() {
     this.localStream = null;
+    this.filteredStream = null;
     this.audioContext = null;
     this.analyser = null;
     this.scriptProcessor = null;
+    this.silentGain = null;
     this.isMuted = true;
     this.isSpeaking = false;
     this.animationFrameId = null;
     this.listeners = new Map();
 
+    // Noise Gate settings
+    this.gateThreshold = 0.025; // Minimum RMS volume for speech transmission
+    this.gateHoldMs = 250; // Hold gate open after speech pauses for smooth natural cadence
+    this.lastSpeechTime = 0;
+
     // WebRTC Peer Connections: targetPlayerId -> RTCPeerConnection
     this.peerConnections = new Map();
     this.remoteAudioElements = new Map();
+    this.activeWebRTCPeers = new Set();
 
     // Socket audio playback queue
     this.playbackContext = null;
@@ -53,7 +66,7 @@ class VoiceService {
   }
 
   /**
-   * Initializes local microphone stream and real-time audio pipeline
+   * Initializes microphone with aggressive hardware & software noise cancellation
    */
   async initMicrophone() {
     if (this.localStream) return true;
@@ -64,13 +77,20 @@ class VoiceService {
         return false;
       }
 
+      // Request microphone with full noise cancellation and echo suppression flags
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          googEchoCancellation: { ideal: true },
+          googAutoGainControl: { ideal: true },
+          googNoiseSuppression: { ideal: true },
+          googHighpassFilter: { ideal: true },
+          googTypingNoiseDetection: { ideal: true },
+          googAudioMirroring: { ideal: false },
           channelCount: 1,
-          sampleRate: 24000
+          sampleRate: 48000
         },
         video: false
       });
@@ -80,23 +100,52 @@ class VoiceService {
         track.enabled = !this.isMuted;
       });
 
-      // Audio Context for speaking level detection and low-latency chunk relay
+      // Audio Context with DSP Filter Chain (Highpass + Vocal Presence)
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
-        this.audioContext = new AudioCtx({ sampleRate: 24000 });
+        this.audioContext = new AudioCtx();
         const source = this.audioContext.createMediaStreamSource(this.localStream);
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 256;
-        source.connect(this.analyser);
 
-        // Low latency PCM chunk capture
-        this.setupLowLatencySocketStream(source);
+        // 1. High-Pass Filter @ 90Hz to strip AC hum, fan rumble, desk vibrations
+        const highpass = this.audioContext.createBiquadFilter();
+        highpass.type = "highpass";
+        highpass.frequency.setValueAtTime(90, this.audioContext.currentTime);
+        highpass.Q.setValueAtTime(0.7, this.audioContext.currentTime);
+
+        // 2. Low-Pass Filter @ 7500Hz to eliminate high-frequency electronic hiss
+        const lowpass = this.audioContext.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.frequency.setValueAtTime(7500, this.audioContext.currentTime);
+
+        // 3. Peaking Filter @ 2000Hz for vocal articulation & speech boost
+        const vocalBooster = this.audioContext.createBiquadFilter();
+        vocalBooster.type = "peaking";
+        vocalBooster.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+        vocalBooster.gain.setValueAtTime(2.5, this.audioContext.currentTime);
+
+        // 4. Analyser for speech energy detection
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 512;
+        this.analyser.smoothingTimeConstant = 0.3;
+
+        // Connect DSP filter chain
+        source.connect(highpass);
+        highpass.connect(lowpass);
+        lowpass.connect(vocalBooster);
+        vocalBooster.connect(this.analyser);
+
+        // 5. Silent destination to prevent mic looping back into own speakers (Anti-Feedback)
+        this.silentGain = this.audioContext.createGain();
+        this.silentGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+
+        // Low-latency socket chunk streamer with noise gate
+        this.setupLowLatencySocketStream(vocalBooster);
         this.startLevelDetection();
       }
 
       this.setupSocketListeners();
 
-      // Inform room peers that voice is ready
+      // Inform room peers
       const socket = socketService.getSocket();
       if (socket && socket.connected) {
         socket.emit("voice:join_room");
@@ -117,37 +166,32 @@ class VoiceService {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    // 1. Peer joined voice room -> create WebRTC offer
     socket.on("voice:user_joined", async ({ playerId }) => {
       if (playerId && this.localStream) {
         await this.createPeerOffer(playerId);
       }
     });
 
-    // 2. Incoming WebRTC Offer
     socket.on("voice:webrtc_offer", async ({ senderId, offer }) => {
       await this.handlePeerOffer(senderId, offer);
     });
 
-    // 3. Incoming WebRTC Answer
     socket.on("voice:webrtc_answer", async ({ senderId, answer }) => {
       await this.handlePeerAnswer(senderId, answer);
     });
 
-    // 4. Incoming WebRTC ICE Candidate
     socket.on("voice:webrtc_ice", async ({ senderId, candidate }) => {
       await this.handlePeerIce(senderId, candidate);
     });
 
-    // 5. Fallback low-latency binary audio chunk from socket
+    // Fallback socket relay audio (Only played if WebRTC track is NOT active to prevent dual echo)
     socket.on("voice:audio_chunk", ({ senderId, audioData }) => {
-      this.playReceivedAudioChunk(audioData);
+      if (!this.activeWebRTCPeers.has(senderId)) {
+        this.playReceivedAudioChunk(audioData);
+      }
     });
   }
 
-  /**
-   * Low latency WebRTC Peer Connection Factory
-   */
   getOrCreatePeerConnection(targetId) {
     if (this.peerConnections.has(targetId)) {
       return this.peerConnections.get(targetId);
@@ -156,7 +200,6 @@ class VoiceService {
     const pc = new RTCPeerConnection(ICE_SERVERS);
     const socket = socketService.getSocket();
 
-    // Send ICE candidates to peer
     pc.onicecandidate = (e) => {
       if (e.candidate && socket) {
         socket.emit("voice:webrtc_ice", {
@@ -166,8 +209,17 @@ class VoiceService {
       }
     };
 
-    // When remote audio track is received from peer, play it directly
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "connected") {
+        this.activeWebRTCPeers.add(targetId);
+      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        this.activeWebRTCPeers.delete(targetId);
+      }
+    };
+
+    // When remote audio track is received from peer
     pc.ontrack = (event) => {
+      this.activeWebRTCPeers.add(targetId);
       let audioEl = this.remoteAudioElements.get(targetId);
       if (!audioEl) {
         audioEl = document.createElement("audio");
@@ -247,20 +299,40 @@ class VoiceService {
   }
 
   /**
-   * Captures raw audio buffers at low latency (< 30ms) for high-speed socket stream relay
+   * Captures raw audio buffers with dynamic Noise Gate (VAD)
    */
-  setupLowLatencySocketStream(source) {
+  setupLowLatencySocketStream(filteredSource) {
     try {
-      // 1024 buffer size at 24kHz = ~42ms audio chunk
+      // 1024 buffer size
       this.scriptProcessor = this.audioContext.createScriptProcessor(1024, 1, 1);
-      source.connect(this.scriptProcessor);
-      this.scriptProcessor.connect(this.audioContext.destination);
+      filteredSource.connect(this.scriptProcessor);
+
+      // Connect to zero-gain node to prevent microphone hearing itself (NO FEEDBACK ECHO)
+      this.scriptProcessor.connect(this.silentGain);
+      this.silentGain.connect(this.audioContext.destination);
 
       this.scriptProcessor.onaudioprocess = (e) => {
-        if (this.isMuted || !this.isSpeaking) return;
+        if (this.isMuted) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
-        // Convert Float32 to Int16 PCM array for ultra-compact transfer
+
+        // Calculate Root Mean Square (RMS) to determine voice activity
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+        const now = Date.now();
+
+        if (rms >= this.gateThreshold) {
+          this.lastSpeechTime = now;
+        }
+
+        // Noise gate: only pass audio if actively speaking or within release hold window
+        const isGateOpen = (now - this.lastSpeechTime) < this.gateHoldMs;
+        if (!isGateOpen) return;
+
+        // Convert Float32 to Int16 PCM array
         const pcmBuffer = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           const s = Math.max(-1, Math.min(1, inputData[i]));
@@ -278,13 +350,13 @@ class VoiceService {
   }
 
   /**
-   * Ultra low-latency PCM playback on receiver side
+   * High quality PCM playback on receiver side
    */
   playReceivedAudioChunk(audioBuffer) {
     try {
       if (!this.playbackContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        this.playbackContext = new AudioCtx({ sampleRate: 24000 });
+        this.playbackContext = new AudioCtx({ sampleRate: 48000 });
       }
 
       if (this.playbackContext.state === "suspended") {
@@ -297,7 +369,7 @@ class VoiceService {
         float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7FFF);
       }
 
-      const audioBuf = this.playbackContext.createBuffer(1, float32.length, 24000);
+      const audioBuf = this.playbackContext.createBuffer(1, float32.length, 48000);
       audioBuf.getChannelData(0).set(float32);
 
       const source = this.playbackContext.createBufferSource();
@@ -311,12 +383,12 @@ class VoiceService {
       source.start(this.nextPlayTime);
       this.nextPlayTime += audioBuf.duration;
     } catch (err) {
-      // Ignore audio chunk jitter
+      // Ignore jitter
     }
   }
 
   /**
-   * Speech level analysis
+   * Voice Activity Detection (VAD) & Speaking level meter
    */
   startLevelDetection() {
     const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
@@ -332,12 +404,16 @@ class VoiceService {
       }
 
       this.analyser.getByteFrequencyData(dataArray);
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
+
+      // Focus on human vocal frequencies (index ~6 to ~70 in 512-bin FFT at 48kHz)
+      let vocalSum = 0;
+      let count = 0;
+      for (let i = 6; i < Math.min(80, dataArray.length); i++) {
+        vocalSum += dataArray[i];
+        count++;
       }
-      const avg = sum / dataArray.length;
-      const speaking = avg > 15; // responsive speaking threshold
+      const vocalAvg = count > 0 ? vocalSum / count : 0;
+      const speaking = vocalAvg > 22; // strict voice threshold to eliminate background room noise
 
       if (speaking !== this.isSpeaking) {
         this.isSpeaking = speaking;
@@ -351,7 +427,7 @@ class VoiceService {
   }
 
   /**
-   * Toggles mute / unmute state
+   * Mute / Unmute
    */
   async toggleMute() {
     if (!this.localStream) {
@@ -382,7 +458,7 @@ class VoiceService {
     return this.isMuted;
   }
 
-  stop() {
+  destroy() {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
@@ -390,11 +466,10 @@ class VoiceService {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
     }
-    this.peerConnections.forEach(pc => pc.close());
-    this.peerConnections.clear();
-    this.remoteAudioElements.forEach(el => el.remove());
-    this.remoteAudioElements.clear();
-
+    if (this.scriptProcessor) {
+      this.scriptProcessor.disconnect();
+      this.scriptProcessor = null;
+    }
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
@@ -403,8 +478,11 @@ class VoiceService {
       this.playbackContext.close();
       this.playbackContext = null;
     }
-    this.isMuted = true;
-    this.isSpeaking = false;
+    this.peerConnections.forEach(pc => pc.close());
+    this.peerConnections.clear();
+    this.remoteAudioElements.forEach(el => el.remove());
+    this.remoteAudioElements.clear();
+    this.activeWebRTCPeers.clear();
   }
 }
 
