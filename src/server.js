@@ -5,6 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { RoomManager, GAME_STATES } from "./game/RoomManager.js";
 import { createApiRouter } from "./routes/api.js";
+import { createAuthRouter } from "./routes/auth.js";
 import { recordGameResult } from "./db/supabase.js";
 
 dotenv.config();
@@ -20,6 +21,10 @@ const roomManager = new RoomManager();
 // Mount REST routes (health & challenges)
 app.use("/", createApiRouter(roomManager));
 app.use("/api", createApiRouter(roomManager));
+
+// Mount Auth routes (Email login & signup)
+app.use("/api/auth", createAuthRouter());
+app.use("/auth", createAuthRouter());
 
 const server = http.createServer(app);
 const io = new Server(server, {

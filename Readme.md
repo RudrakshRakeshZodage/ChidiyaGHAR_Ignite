@@ -165,6 +165,10 @@ Under **Environment Variables**, add the following key-value pairs:
 | `GET` | `/health` | Health check endpoint for uptime monitors |
 | `GET` | `/api/status` | Active room stats & server status |
 | `GET` | `/api/challenges` | Catalog of debugging challenges (public metadata) |
+| `POST` | `/api/auth/signup` | Register a new user with email & password |
+| `POST` | `/api/auth/login` | Sign in with email & password (returns session token) |
+| `GET` | `/api/auth/me` | Fetch authenticated user profile |
+| `POST` | `/api/auth/logout` | Invalidate session |
 
 ### WebSocket Events
 - **Room Lifecycle**: `room:create`, `room:join`, `room:ready_toggle`, `game:start`, `game:role_ack`
