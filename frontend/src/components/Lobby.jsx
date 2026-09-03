@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Play, Plus, ArrowRight, Shield, Bug, Sparkles, CheckCircle2, Circle, Flame, Cpu } from 'lucide-react';
+import { Users, Play, Plus, ArrowRight, Shield, Bug, Sparkles, CheckCircle2, Circle, Flame, Cpu, Wand2, RefreshCw, Layers, Check, X } from 'lucide-react';
 import { CHALLENGES } from '../data/challenges';
 
 const AVATARS = [
@@ -11,6 +11,14 @@ const AVATARS = [
   { id: "wizard", icon: "🧙‍♂️", label: "Wizard" },
   { id: "alien", icon: "👾", label: "Alien" },
   { id: "ghost", icon: "👻", label: "Specter" }
+];
+
+const PROMPT_SUGGESTIONS = [
+  "💳 Double-Spending Nonce Validator",
+  "🔐 JWT Token Expiration Guard",
+  "⏳ Sliding Window API Rate Limiter",
+  "🛒 Multi-Currency Cart Discount Engine",
+  "📦 Stock Inventory Mutex Lock"
 ];
 
 export default function Lobby({
@@ -29,9 +37,52 @@ export default function Lobby({
   const [joinCode, setJoinCode] = useState("");
   
   // Game Settings (Host only)
+  const [challengesList, setChallengesList] = useState(CHALLENGES);
   const [selectedChallengeId, setSelectedChallengeId] = useState(CHALLENGES[0].id);
   const [durationMinutes, setDurationMinutes] = useState(10);
   const [mafiaCount, setMafiaCount] = useState(1);
+
+  // AI Prompt Challenge Generator State
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiSuccessMessage, setAiSuccessMessage] = useState(null);
+
+  const getBackendUrl = () => {
+    return import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_BACKEND_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin);
+  };
+
+  const handleGenerateAiChallenge = async (customPrompt) => {
+    const promptToUse = customPrompt || aiPrompt;
+    if (!promptToUse.trim()) return;
+
+    setIsGeneratingAi(true);
+    try {
+      const backendUrl = getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/challenges/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptToUse.trim() })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.challenge) {
+          setChallengesList(prev => [data.challenge, ...prev]);
+          setSelectedChallengeId(data.challenge.id);
+          setAiSuccessMessage(`✨ Created "${data.challenge.title}" with ${data.challenge.testSuite?.length || 3} tests!`);
+          setTimeout(() => {
+            setShowAiModal(false);
+            setAiSuccessMessage(null);
+          }, 1400);
+        }
+      }
+    } catch (err) {
+      console.warn("AI Challenge Generation note:", err.message);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -118,12 +169,15 @@ export default function Lobby({
             </div>
           </div>
 
+          {/* Grid Layout: Squad & Mission Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Player Squad List */}
+            {/* Left: Connected Squad Roster */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <span>Team Squad ({playersList.length}/8)</span>
-                <span>Ready Status</span>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-sky-400" />
+                  <span>Operatives Connected ({playersList.length} / 8)</span>
+                </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -132,43 +186,42 @@ export default function Lobby({
                   return (
                     <div
                       key={p.id}
-                      className={`p-4 rounded-xl border flex items-center justify-between transition ${
+                      className={`p-4 rounded-xl border transition-all flex items-center justify-between ${
                         isMe
-                          ? "bg-slate-800/80 border-sky-500/50 shadow-md shadow-sky-500/10"
-                          : "bg-slate-900/60 border-slate-800/80"
+                          ? "bg-sky-950/30 border-sky-500/50 shadow-lg shadow-sky-950/20"
+                          : "bg-slate-900/60 border-slate-800"
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="h-11 w-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl shadow-inner">
+                        <div className="h-10 w-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">
                           {p.avatar || "👨‍💻"}
                         </div>
                         <div>
                           <div className="font-bold text-sm text-slate-200 flex items-center space-x-1.5">
                             <span>{p.name}</span>
-                            {isMe && <span className="text-[11px] font-normal text-sky-400">(You)</span>}
+                            {isMe && <span className="text-[10px] text-sky-400 font-normal">(You)</span>}
                           </div>
-                          <div className="text-xs text-slate-400 flex items-center space-x-1">
-                            {p.isHost && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800 text-amber-300 font-semibold">
-                                HOST
-                              </span>
+                          <div className="text-xs text-slate-500 flex items-center space-x-1">
+                            {p.isHost ? (
+                              <span className="text-amber-400 font-semibold font-mono">👑 Host</span>
+                            ) : (
+                              <span>Operative</span>
                             )}
-                            <span className="text-slate-500">Agent</span>
                           </div>
                         </div>
                       </div>
 
-                      <div>
+                      <div className="flex items-center space-x-1 font-mono text-xs font-semibold">
                         {p.isReady ? (
-                          <div className="flex items-center space-x-1 text-emerald-400 text-xs font-semibold bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-800/80">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span className="flex items-center space-x-1 text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded-full">
+                            <CheckCircle2 className="h-3 w-3" />
                             <span>READY</span>
-                          </div>
+                          </span>
                         ) : (
-                          <div className="flex items-center space-x-1 text-slate-500 text-xs font-medium bg-slate-800/60 px-2 py-1 rounded-md">
-                            <Circle className="h-3.5 w-3.5" />
+                          <span className="flex items-center space-x-1 text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+                            <Circle className="h-3 w-3" />
                             <span>WAITING</span>
-                          </div>
+                          </span>
                         )}
                       </div>
                     </div>
@@ -177,24 +230,22 @@ export default function Lobby({
               </div>
             </div>
 
-            {/* Selected Challenge Details */}
+            {/* Right: Mission Overview */}
             <div className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Target Codebase
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
+                <Shield className="h-4 w-4 text-rose-400" />
+                <span>Mission Parameters</span>
               </h3>
-              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300 font-semibold">
-                    {room.challenge?.category || "Algorithms"}
-                  </span>
-                  <span className="text-xs font-mono text-amber-400 font-bold">
-                    {room.challenge?.difficulty || "Medium"}
-                  </span>
-                </div>
 
+              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-4">
                 <div>
-                  <h4 className="font-bold text-white text-base">{room.challenge?.title}</h4>
-                  <p className="text-xs text-slate-300 mt-1 line-clamp-3">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 block mb-1">
+                    {room.challenge?.category || "Target Challenge"}
+                  </span>
+                  <h4 className="font-black text-slate-200 text-base leading-tight">
+                    {room.challenge?.title || "Code Base Mission"}
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                     {room.challenge?.description}
                   </p>
                 </div>
@@ -202,11 +253,11 @@ export default function Lobby({
                 <div className="border-t border-slate-800 pt-3 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between text-slate-400">
                     <span>Deliberate Bugs:</span>
-                    <span className="font-bold text-rose-400">{room.challenge?.bugsCount || 3} stealth bugs</span>
+                    <span className="font-bold text-rose-400">{room.challenge?.bugsCount || 2} stealth bugs</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-400">
                     <span>Automated Tests:</span>
-                    <span className="font-bold text-emerald-400">{room.challenge?.testSuite?.length || 5} test cases</span>
+                    <span className="font-bold text-emerald-400">{room.challenge?.testSuite?.length || 3} test cases</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-400">
                     <span>Time Limit:</span>
@@ -284,7 +335,7 @@ export default function Lobby({
             </div>
           </div>
 
-          {/* Mode Tabs */}
+          {/* Action Tabs: Create Match vs Join */}
           <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
             <button
               type="button"
@@ -314,15 +365,28 @@ export default function Lobby({
           {tab === "create" && (
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Select Code Challenge
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Code Challenge
+                  </label>
+                  
+                  {/* AI Generator Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowAiModal(true)}
+                    className="text-[11px] font-bold text-fuchsia-400 hover:text-fuchsia-300 flex items-center space-x-1 bg-fuchsia-950/50 hover:bg-fuchsia-950 border border-fuchsia-800/80 px-2 py-0.5 rounded-lg transition shadow-sm"
+                  >
+                    <Wand2 className="h-3 w-3" />
+                    <span>✨ AI Prompt Challenge</span>
+                  </button>
+                </div>
+
                 <select
                   value={selectedChallengeId}
                   onChange={(e) => setSelectedChallengeId(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-sky-500"
                 >
-                  {CHALLENGES.map((ch) => (
+                  {challengesList.map((ch) => (
                     <option key={ch.id} value={ch.id}>
                       {ch.title} ({ch.difficulty} • {ch.bugsCount} Bugs)
                     </option>
@@ -383,24 +447,112 @@ export default function Lobby({
                   type="text"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="E.g. JX89KZ"
-                  maxLength={6}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-sky-400 placeholder-slate-600 text-center font-mono font-extrabold text-lg tracking-widest focus:outline-none focus:border-sky-500 transition uppercase"
+                  placeholder="e.g. CM-8492"
+                  maxLength={10}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono tracking-widest text-center text-base uppercase font-bold"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={!nickname.trim() || !joinCode.trim() || isConnecting}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-sky-600/25 transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-extrabold text-sm shadow-xl shadow-sky-600/25 transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2"
               >
-                <span>CONNECT & JOIN SQUAD</span>
                 <ArrowRight className="h-4 w-4" />
+                <span>JOIN SQUAD</span>
               </button>
             </form>
           )}
         </div>
       </div>
+
+      {/* AI Challenge Generator Modal */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+          <div className="relative max-w-lg w-full glass-card rounded-2xl p-6 border border-fuchsia-700/60 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="h-9 w-9 rounded-xl bg-fuchsia-950 border border-fuchsia-600 flex items-center justify-center text-fuchsia-400">
+                  <Wand2 className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white font-display">
+                    AI CODE CHALLENGE GENERATOR
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Type a prompt to auto-generate code with deliberate bugs & unit test suite
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Prompt Input */}
+            <div className="space-y-3">
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Describe your coding challenge (e.g. 'Banking Ledger double-spending validator' or 'OAuth JWT Claims parser')..."
+                rows={3}
+                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-fuchsia-500"
+              />
+
+              {/* Quick Prompt Suggestion Pills */}
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1.5">
+                  Quick Ideas:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PROMPT_SUGGESTIONS.map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setAiPrompt(sug);
+                        handleGenerateAiChallenge(sug);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-fuchsia-600/80 text-slate-300 hover:text-fuchsia-300 transition"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {aiSuccessMessage && (
+                <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs font-mono font-bold flex items-center space-x-2 animate-bounce">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <span>{aiSuccessMessage}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleGenerateAiChallenge()}
+                disabled={!aiPrompt.trim() || isGeneratingAi}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-sky-600 hover:from-fuchsia-500 hover:to-sky-500 text-white font-extrabold text-xs shadow-xl shadow-fuchsia-600/30 transition disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {isGeneratingAi ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>SYNTHESIZING CODE & TEST SUITE...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>GENERATE CHALLENGE NOW</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

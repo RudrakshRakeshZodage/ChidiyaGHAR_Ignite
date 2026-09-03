@@ -288,3 +288,14 @@ export const CHALLENGES = [
 export function getChallengeById(id) {
   return CHALLENGES.find(c => c.id === id) || CHALLENGES[0];
 }
+
+export function addCustomChallenge(challenge) {
+  if (!challenge || !challenge.id) return null;
+  const existingIdx = CHALLENGES.findIndex(c => c.id === challenge.id);
+  if (existingIdx >= 0) {
+    CHALLENGES[existingIdx] = challenge;
+  } else {
+    CHALLENGES.unshift(challenge);
+  }
+  return challenge;
+}

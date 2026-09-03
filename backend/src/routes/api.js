@@ -1,6 +1,7 @@
 import express from "express";
 import { CHALLENGES } from "../game/challenges.js";
 import { fetchRealtimeLeaderboard, fetchUserProfile } from "../db/supabase.js";
+import { generateAiChallenge } from "../services/aiChallengeService.js";
 
 let pingCount = 0;
 
@@ -70,9 +71,22 @@ export function createApiRouter(roomManager) {
       difficulty: c.difficulty,
       description: c.description,
       bugsCount: c.bugsCount,
-      testCount: c.testSuite.length
+      testCount: c.testSuite?.length || 3
     }));
     res.json(list);
+  });
+
+  // Generate Custom AI Challenge by Prompt
+  router.post("/api/challenges/generate", async (req, res) => {
+    const { prompt } = req.body || {};
+    const result = await generateAiChallenge(prompt);
+    res.json(result);
+  });
+
+  router.post("/challenges/generate", async (req, res) => {
+    const { prompt } = req.body || {};
+    const result = await generateAiChallenge(prompt);
+    res.json(result);
   });
 
   // Real-time Global Leaderboard & Agent Dashboard Stats (Live from Supabase & Active Sessions)
