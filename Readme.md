@@ -1,73 +1,197 @@
 # 🕵️‍♂️ Code Mafia Backend: Multiplayer Debugging Challenge Engine
 
-Real-time Node.js + Socket.IO backend with sandboxed VM code execution engine for **Code Mafia**.
+Real-time **Node.js** + **Socket.IO** backend with sandboxed **Node VM** code execution engine and **Supabase** persistence for **Code Mafia**.
 
 ---
 
-## 🎯 Problem Statement Features Implemented
-- **Game Creation & Lobby Management**: In-memory room orchestration with dynamic player capacity and customizable match timers.
-- **Hidden Role Assignment**: Secret role allocation engine (**Developers** vs **Code Mafia**) with secret sabotaging objectives.
-- **Real-Time Collaborative State**: Synchronized codebase updates, test runner outputs, and player presence.
-- **Controlled Test Runner Sandbox**: Isolated Node `vm` execution testing user code against unit test assertions with timeout safety.
-- **Player Activity Audit Log**: Git-like commit and test log capturing developer edits and suspected sabotage actions.
-- **Emergency Meetings & Democratic Voting**: Countdown timer voting mechanism with tie-breakers and ejection resolution.
-- **Configurable Victory Conditions**: Automatic win/loss resolution (100% tests passed vs Mafia parity/timer expiration).
+## 📋 Table of Contents
+1. [Prerequisites](#-prerequisites)
+2. [Setup on a Brand New System (Step-by-Step Terminal Commands)](#-setup-on-a-brand-new-system-step-by-step-terminal-commands)
+3. [Running Locally](#-running-locally)
+4. [Environment Variables](#-environment-variables)
+5. [Step-by-Step Deployment to Render](#-step-by-step-deployment-to-render)
+6. [API & WebSocket Documentation](#-api--websocket-documentation)
+7. [Project Structure](#-project-structure)
 
 ---
 
-## 🚀 Getting Started with PNPM
+## ⚡ Prerequisites
+Ensure you have the following installed on your machine:
+- **Node.js** (v18.0.0 or higher) → [Download Node.js](https://nodejs.org/)
+- **Git** → [Download Git](https://git-scm.com/)
+- **PNPM** package manager
 
-### Prerequisites
-- Node.js >= 18
-- pnpm (`npx pnpm` or `npm install -g pnpm`)
+---
 
-### Installation & Execution
+## 💻 Setup on a Brand New System (Step-by-Step Terminal Commands)
+
+Run the following commands in your terminal (PowerShell, Command Prompt, or Bash):
+
+### Step 1: Clone the Repository & Checkout Backend Branch
+```bash
+# Clone the repository
+git clone https://github.com/RudrakshRakeshZodage/ChidiyaGHAR_Ignite.git
+
+# Navigate into the project directory
+cd ChidiyaGHAR_Ignite
+
+# Checkout the Backend branch
+git checkout Backend
+```
+
+### Step 2: Install PNPM (if not already installed)
+```bash
+# Install PNPM globally via npm
+npm install -g pnpm
+
+# Verify PNPM installation
+pnpm -v
+```
+
+### Step 3: Install Project Dependencies
 ```bash
 # Install dependencies using pnpm
 pnpm install
+```
 
-# Run in development mode (with hot reloading)
-pnpm run dev
+### Step 4: Configure Environment Variables
+```bash
+# Copy example environment file
+cp .env.example .env
+```
+*(Or on Windows PowerShell: `Copy-Item .env.example .env`)*
 
-# Run in production mode
-pnpm start
+Your `.env` will contain:
+```env
+PORT=5000
+NODE_ENV=development
+CORS_ORIGIN=*
+
+# Supabase Credentials
+SUPABASE_URL=https://msgjuazmayoimjjaatmh.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh
+SUPABASE_SECRET_KEY=sb_secret_PwTFIH64UCR-xJ1Z9c5ERw_J12jVn_B
+SUPABASE_JWKS_URL=https://msgjuazmayoimjjaatmh.supabase.co/auth/v1/.well-known/jwks.json
 ```
 
 ---
 
-## 🌐 Endpoints & WebSockets
+## 🚀 Running Locally
+
+### Development Server (with Auto-Reload)
+```bash
+# Start backend in development mode with nodemon
+pnpm run dev
+```
+
+### Production Server
+```bash
+# Start backend in production mode
+pnpm start
+```
+
+### Run Unit Tests
+```bash
+# Execute unit test suite for sandbox runner & challenges
+pnpm test
+# OR
+node test/server.test.js
+```
+
+---
+
+## ☁️ Step-by-Step Deployment to Render
+
+Follow these exact steps to deploy the backend on [Render](https://render.com):
+
+### Step 1: Push latest changes to GitHub
+```bash
+git add .
+git commit -m "feat: ready for render deployment"
+git push origin Backend
+```
+
+### Step 2: Create a Web Service on Render
+1. Go to [dashboard.render.com](https://dashboard.render.com/) and sign in.
+2. Click **"New +"** → **"Web Service"**.
+3. Connect your GitHub account and select repository **`RudrakshRakeshZodage/ChidiyaGHAR_Ignite`**.
+
+### Step 3: Configure Render Settings
+Fill in the deployment configuration:
+- **Name**: `code-mafia-backend` (or your preferred name)
+- **Region**: Closest to your players (e.g. `Singapore` or `Frankfurt`)
+- **Branch**: **`Backend`** (⚠️ Important: Ensure `Backend` is selected, NOT `main`)
+- **Root Directory**: `./` (leave blank / default)
+- **Runtime**: `Node`
+- **Build Command**: `npx pnpm install`
+- **Start Command**: `node src/server.js` (or `npx pnpm start`)
+- **Instance Type**: `Free`
+
+### Step 4: Add Environment Variables on Render
+Under **Environment Variables**, add the following key-value pairs:
+| Key | Value |
+|---|---|
+| `PORT` | `5000` |
+| `NODE_ENV` | `production` |
+| `CORS_ORIGIN` | `*` *(or your Vercel frontend URL)* |
+| `SUPABASE_URL` | `https://msgjuazmayoimjjaatmh.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_Zp2BXwr2Fs98YJnSonG2HA_bkDiq_eh` |
+| `SUPABASE_SECRET_KEY` | `sb_secret_PwTFIH64UCR-xJ1Z9c5ERw_J12jVn_B` |
+| `SUPABASE_JWKS_URL` | `https://msgjuazmayoimjjaatmh.supabase.co/auth/v1/.well-known/jwks.json` |
+
+### Step 5: Deploy & Get URL
+1. Click **"Deploy Web Service"**.
+2. Render will build and deploy your service.
+3. Once deployed, copy your Render Service URL (e.g., `https://code-mafia-backend.onrender.com`).
+4. Verify by opening `https://code-mafia-backend.onrender.com/health` in your browser. You will see:
+   ```json
+   {
+     "status": "ok",
+     "uptime": 12.4,
+     "timestamp": "2026-09-03T11:45:00.000Z",
+     "service": "Code Mafia Game Engine Backend",
+     "version": "1.0.0"
+   }
+   ```
+5. Paste this URL into your Frontend's `VITE_BACKEND_URL` on Vercel!
+
+---
+
+## 🌐 API & WebSocket Documentation
 
 ### REST Endpoints
 | Method | Route | Description |
 |---|---|---|
-| `GET` | `/health` | Cloud deployment health check & uptime monitor |
+| `GET` | `/health` | Health check endpoint for uptime monitors |
 | `GET` | `/api/status` | Active room stats & server status |
 | `GET` | `/api/challenges` | Catalog of debugging challenges (public metadata) |
 
-### WebSocket Real-time Events
-- `room:create` / `room:join` / `room:leave`
-- `room:ready_toggle` / `game:start` / `game:role_ack`
-- `code:change` / `code:sync`
-- `code:run_tests` / `tests:completed`
-- `meeting:call` / `vote:cast` / `meeting:ejection`
-- `chat:send` / `chat:message`
+### WebSocket Events
+- **Room Lifecycle**: `room:create`, `room:join`, `room:ready_toggle`, `game:start`, `game:role_ack`
+- **Code Collaboration**: `code:change` (broadcasts `code:sync` to room)
+- **Test Runner**: `code:run_tests` (executes inside VM, broadcasts `tests:completed`)
+- **Emergency Meeting**: `meeting:call`, `vote:cast`, `meeting:ejection`
 
 ---
 
-## ☁️ Deployment Guide
+## 📁 Project Structure
 
-### Deploy to Render
-1. Create a new **Web Service** on [Render](https://render.com).
-2. Connect this repository and set the branch to **`Backend`**.
-3. **Build Command**: `npx pnpm install`
-4. **Start Command**: `npx pnpm start`
-5. **Environment Variables**:
-   - `PORT`: `5000` (or leave default, Render supplies `PORT`)
-   - `NODE_ENV`: `production`
-   - `CORS_ORIGIN`: `*` (or your frontend URL)
-
-### Deploy to Railway / Heroku
-- The included `Procfile` is preconfigured for single-click deployment:
-  ```
-  web: node src/server.js
-  ```
+```
+ChidiyaGHAR_Ignite (Backend Branch)
+├── src/
+│   ├── db/
+│   │   └── supabase.js        # Supabase client & match result logger
+│   ├── game/
+│   │   ├── challenges.js      # Challenge definitions, starter code & test suites
+│   │   ├── RoleAssigner.js    # Developer vs Mafia secret role assignment
+│   │   ├── RoomManager.js     # State machine for rooms, voting & win conditions
+│   │   └── TestEngine.js      # Sandboxed Node VM code execution runner
+│   ├── routes/
+│   │   └── api.js             # REST API router (/health, /api/challenges)
+│   └── server.js              # Express + Socket.IO server entrypoint
+├── test/
+│   └── server.test.js         # Automated backend test suite
+├── .env.example               # Environment variables template
+├── package.json               # Backend dependencies & scripts
+└── Procfile                   # Cloud process file for Render / Railway / Heroku
+```

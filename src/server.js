@@ -5,6 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { RoomManager, GAME_STATES } from "./game/RoomManager.js";
 import { createApiRouter } from "./routes/api.js";
+import { recordGameResult } from "./db/supabase.js";
 
 dotenv.config();
 
@@ -31,6 +32,10 @@ const io = new Server(server, {
 // Broadcast sanitized room state to all sockets in the room
 function broadcastRoomState(room) {
   if (!room) return;
+  if (room.status === GAME_STATES.GAME_OVER && !room._loggedToDb) {
+    room._loggedToDb = true;
+    recordGameResult(room);
+  }
   for (const player of room.players.values()) {
     if (player.socketId) {
       const sanitized = roomManager.sanitizeRoomForPlayer(room, player.id);
