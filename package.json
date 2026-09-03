@@ -3,13 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "description": "Code Mafia: Real-time Collaborative Coding & Social Deduction Platform",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "pnpm --parallel --filter frontend --filter backend dev",
-    "dev:frontend": "pnpm --filter frontend dev",
-    "dev:backend": "pnpm --filter backend dev",
-    "build:frontend": "pnpm --filter frontend build",
-    "start:backend": "pnpm --filter backend start",
-    "test:backend": "pnpm --filter backend test"
+    "dev": "npx concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "start:backend": "npm --prefix backend start",
+    "test:backend": "npm --prefix backend test",
+    "pnpm:dev": "pnpm --parallel --filter frontend --filter backend dev",
+    "pnpm:dev:frontend": "pnpm --filter frontend dev",
+    "pnpm:dev:backend": "pnpm --filter backend dev"
   },
   "keywords": [
     "code-mafia",
