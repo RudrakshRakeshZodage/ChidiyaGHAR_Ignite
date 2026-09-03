@@ -18,6 +18,14 @@
     "pnpm:dev:frontend": "pnpm --filter frontend dev",
     "pnpm:dev:backend": "pnpm --filter backend dev"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0 <=22.x"
+  },
   "keywords": [
     "code-mafia",
     "social-deduction",
