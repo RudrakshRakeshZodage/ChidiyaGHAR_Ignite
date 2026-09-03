@@ -1,0 +1,35 @@
+{
+  "name": "code-mafia-backend",
+  "version": "1.0.0",
+  "description": "Real-time backend and test execution engine for Code Mafia multiplayer debugging game",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "multiplayer",
+    "collaborative-coding",
+    "debugging",
+    "mafia-game",
+    "socketio",
+    "express"
+  ],
+  "author": "ChidiyaGHAR Ignite Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
