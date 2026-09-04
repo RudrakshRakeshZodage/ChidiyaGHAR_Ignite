@@ -234,6 +234,16 @@ export default function MysteryCluesDossier({
         </div>
       </div>
 
+      {/* MYSTERY BOX FORFEITED ALERT BANNER (AI HINT USED) */}
+      {(room?.hasUsedAiHint || room?.mysteryBoxForfeited || player?.usedAiHint) && (
+        <div className="px-3.5 py-2 bg-gradient-to-r from-[#200206] via-[#100305] to-[#200206] border-b border-[#e31b23]/70 flex items-center space-x-2 text-xs font-mono text-rose-300">
+          <AlertTriangle className="h-4 w-4 text-[#e31b23] shrink-0 animate-pulse" />
+          <span>
+            <strong className="text-[#e31b23]">MYSTERY BOX FORFEITED:</strong> 1x AI Tactical Hint was used in this mission. Unboxings are disabled.
+          </span>
+        </div>
+      )}
+
       {/* Main Container */}
       <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4 bg-[#070a12] custom-scrollbar">
         

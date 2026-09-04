@@ -9,6 +9,7 @@ import { createApiRouter } from "./routes/api.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { recordGameResult } from "./db/supabase.js";
 import { generateAiRiddlesForMafia } from "./services/aiRiddleService.js";
+import { generateAiHint } from "./services/aiHintService.js";
 
 dotenv.config();
 
@@ -290,6 +291,58 @@ io.on("connection", (socket) => {
       socket.to(currentRoomCode).emit("code:player_typing", {
         playerId: sender.id,
         playerName: sender.name
+      });
+    }
+  });
+
+  // 6d. 1-Time AI Tactical Hint (Forfeits Mystery Box)
+  socket.on("code:request_ai_hint", async ({ activeFileName, currentCode }, callback) => {
+    if (!currentRoomCode || !currentPlayerId) {
+      return callback?.({ success: false, error: "Not in active game room." });
+    }
+
+    const room = roomManager.getRoom(currentRoomCode);
+    if (!room) {
+      return callback?.({ success: false, error: "Room not found." });
+    }
+
+    const hintRes = roomManager.useAiHint(currentRoomCode, currentPlayerId);
+    if (hintRes.error) {
+      return callback?.({ success: false, error: hintRes.error });
+    }
+
+    // Broadcast room update reflecting AI Hint usage and Mystery Box forfeiture
+    broadcastRoomState(room);
+
+    try {
+      const playerWs = room.playerWorkspaces?.get(currentPlayerId);
+      const failedTests = (playerWs?.testResults?.tests || room.testResults?.tests || [])
+        .filter(t => !t.passed);
+
+      const aiHint = await generateAiHint({
+        challenge: room.challenge,
+        currentCode: currentCode || playerWs?.code || room.currentCode || "",
+        files: playerWs?.files || room.files,
+        failedTests,
+        role: hintRes.player?.role || "DEVELOPER",
+        activeFileName: activeFileName || room.challenge?.activeFileName || "main.js"
+      });
+
+      callback?.({
+        success: true,
+        hint: aiHint,
+        mysteryBoxForfeited: true
+      });
+    } catch (err) {
+      console.warn("[Server] Error generating AI Hint:", err.message);
+      callback?.({
+        success: true,
+        hint: {
+          title: "Tactical Guidance",
+          hint: "Examine function boundary inputs, return types, and off-by-one loop conditions.",
+          codeClue: "// Inspect edge cases carefully"
+        },
+        mysteryBoxForfeited: true
       });
     }
   });

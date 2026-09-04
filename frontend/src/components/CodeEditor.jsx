@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { 
   Code, Copy, RotateCcw, Check, Sparkles, Terminal, Lock, 
   Bug, Shield, Users, Eye, Columns, Snowflake, Flame, 
-  Plus, Trash2, FileText, Play, LayoutGrid, Terminal as TerminalIcon
+  Plus, Trash2, FileText, Play, LayoutGrid, Terminal as TerminalIcon,
+  Lightbulb
 } from 'lucide-react';
 import SaboteurGlitchOverlay from './SaboteurGlitchOverlay';
 import TerminalConsole from './TerminalConsole';
@@ -22,7 +23,10 @@ export default function CodeEditor({
   activeTypers = [],
   onOpenSurveillance,
   onRunTests,
-  testResults
+  testResults,
+  onOpenAiHint,
+  hasUsedAiHint = false,
+  activeAiHint = null
 }) {
   const textareaRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -268,8 +272,29 @@ export default function CodeEditor({
           </button>
         </div>
 
-        {/* Language Badge & View Switcher */}
+        {/* Language Badge, AI Hint & View Switcher */}
         <div className="flex items-center space-x-2 shrink-0">
+          {/* 1x AI Tactical Hint Trigger */}
+          {onOpenAiHint && (
+            <button
+              type="button"
+              onClick={onOpenAiHint}
+              title={activeAiHint ? "View Active AI Tactical Hint" : hasUsedAiHint ? "AI Hint already used for this mission" : "Activate 1-time AI Tactical Hint (Forfeits Mystery Box)"}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center space-x-1.5 transition border ${
+                activeAiHint
+                  ? "bg-amber-950/80 border-amber-500 text-amber-300 shadow-md shadow-amber-950/40 animate-pulse"
+                  : hasUsedAiHint
+                  ? "bg-slate-900 border-slate-800 text-slate-500 cursor-pointer hover:border-slate-700"
+                  : "bg-gradient-to-r from-amber-600 to-[#e31b23] border-amber-400 text-white shadow-md shadow-rose-950/60 hover:brightness-110 active:scale-95"
+              }`}
+            >
+              <Lightbulb className={`h-3.5 w-3.5 ${activeAiHint ? "text-amber-400 fill-amber-400" : hasUsedAiHint ? "text-slate-500" : "text-amber-200 fill-amber-200"}`} />
+              <span className="hidden sm:inline">
+                {activeAiHint ? "AI Hint: Active" : hasUsedAiHint ? "AI Hint (Used)" : "AI Hint (1x)"}
+              </span>
+            </button>
+          )}
+
           <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border flex items-center space-x-1 ${langBadge.color}`}>
             <span>{langBadge.icon}</span>
             <span>{langBadge.label}</span>

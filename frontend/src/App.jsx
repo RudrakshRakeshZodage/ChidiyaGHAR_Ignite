@@ -15,6 +15,7 @@ import ActivityFeed from './components/ActivityFeed';
 import EvidenceBoard from './components/EvidenceBoard';
 import MysteryCluesDossier from './components/MysteryCluesDossier';
 import MysteryBoxModal from './components/MysteryBoxModal';
+import AiHintModal from './components/AiHintModal';
 import LeaderboardModal from './components/LeaderboardModal';
 import UserProfileModal from './components/UserProfileModal';
 import MafiaSurveillanceDashboard from './components/MafiaSurveillanceDashboard';
@@ -48,6 +49,11 @@ export default function App() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(null);
   const [ejectionToast, setEjectionToast] = useState(null);
+
+  // 1-Time AI Tactical Hint State
+  const [showAiHintModal, setShowAiHintModal] = useState(false);
+  const [activeAiHint, setActiveAiHint] = useState(null);
+  const [isLoadingAiHint, setIsLoadingAiHint] = useState(false);
 
   // Real-time Voice Chat State
   const [isVoiceMuted, setIsVoiceMuted] = useState(true);
@@ -599,6 +605,36 @@ export default function App() {
     }
   };
 
+  // Request 1-Time AI Tactical Hint (Forfeits Mystery Box)
+  const handleRequestAiHint = () => {
+    setIsLoadingAiHint(true);
+    const socket = socketService.getSocket();
+    if (socket && socket.connected) {
+      socket.emit("code:request_ai_hint", {
+        activeFileName: room?.challenge?.activeFileName || "main.js",
+        currentCode: code
+      }, (res) => {
+        setIsLoadingAiHint(false);
+        if (res && res.success) {
+          setActiveAiHint(res.hint);
+          setRoom(prev => prev ? { ...prev, hasUsedAiHint: true, mysteryBoxForfeited: true } : prev);
+        } else {
+          alert(res?.error || "Failed to retrieve AI tactical hint.");
+        }
+      });
+    } else {
+      setTimeout(() => {
+        setIsLoadingAiHint(false);
+        setActiveAiHint({
+          title: "Offline Tactical Guidance",
+          hint: "Double check edge cases for negative and boundary values. Inspect loop condition bounds and return types.",
+          codeClue: "const result = input !== null ? process(input) : defaultValue;"
+        });
+        setRoom(prev => prev ? { ...prev, hasUsedAiHint: true, mysteryBoxForfeited: true } : prev);
+      }, 700);
+    }
+  };
+
   // Call Emergency Meeting
   const handleCallMeeting = () => {
     const socket = socketService.getSocket();
@@ -867,6 +903,9 @@ export default function App() {
                   onOpenSurveillance={() => setShowSurveillanceModal(true)}
                   onRunTests={handleRunTests}
                   testResults={testResults}
+                  onOpenAiHint={() => setShowAiHintModal(true)}
+                  hasUsedAiHint={!!(room?.hasUsedAiHint || room?.mysteryBoxForfeited || activeAiHint)}
+                  activeAiHint={activeAiHint}
                 />
               </div>
 
@@ -1076,6 +1115,17 @@ export default function App() {
           onPlayAgain={handlePlayAgain}
         />
       )}
+
+      {/* 1-Time AI Tactical Hint Modal */}
+      <AiHintModal
+        isOpen={showAiHintModal}
+        onClose={() => setShowAiHintModal(false)}
+        onRequestHint={handleRequestAiHint}
+        hintData={activeAiHint}
+        isLoading={isLoadingAiHint}
+        hasUsedHint={!!(room?.hasUsedAiHint || room?.mysteryBoxForfeited || activeAiHint)}
+        mysteryBoxForfeited={!!(room?.hasUsedAiHint || room?.mysteryBoxForfeited || activeAiHint)}
+      />
 
       {/* Authentication Modal (Sign In / Sign Up) */}
       <AuthModal

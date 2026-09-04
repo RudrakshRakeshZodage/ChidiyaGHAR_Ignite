@@ -72,7 +72,8 @@ export class RoomManager {
       phaseTimeRemaining: 30,
       snapshotBeforeCode: defaultChallenge.starterCode,
       mysteryRiddles: [],
-      unlockedClueIndices: []
+      unlockedClueIndices: [],
+      playersWithForfeitedMystery: []
     };
 
     // Add host player
@@ -83,6 +84,7 @@ export class RoomManager {
       avatar: hostPlayer.avatar || "👨‍💻",
       isHost: true,
       isReady: true,
+      usedAiHint: false,
       isAlive: true,
       role: null,
       roleDetails: null
@@ -111,6 +113,7 @@ export class RoomManager {
       avatar: player.avatar || "👩‍💻",
       isHost: false,
       isReady: false,
+      usedAiHint: false,
       isAlive: true,
       role: null,
       roleDetails: null
@@ -226,6 +229,12 @@ export class RoomManager {
     room.phaseTimeRemaining = 30;
     room.snapshotBeforeCode = challenge.starterCode;
     room.unlockedClueIndices = [];
+    room.playersWithForfeitedMystery = [];
+
+    // Reset player hint states
+    for (const player of room.players.values()) {
+      player.usedAiHint = false;
+    }
 
     // Pre-generate baseline riddles for the secret Mafia player
     const mafiaPlayer = assigned.find(p => p.role === "MAFIA");
@@ -349,6 +358,8 @@ export class RoomManager {
 
     // Track newly unlocked Mystery Box clues for passed test cases
     const newlyUnlockedClues = [];
+    const isMysteryForfeited = !!(player?.usedAiHint || ws?.usedAiHint || room.playersWithForfeitedMystery?.includes(playerId));
+
     if (testResults && testResults.tests) {
       if (!room.unlockedClueIndices) room.unlockedClueIndices = [];
       testResults.tests.forEach((t, idx) => {
@@ -356,13 +367,22 @@ export class RoomManager {
           room.unlockedClueIndices.push(idx);
           const clue = room.mysteryRiddles?.[idx];
           if (clue) {
-            newlyUnlockedClues.push(clue);
-            room.activityLog.push({
-              id: uuidv4(),
-              type: "MYSTERY_UNLOCKED",
-              text: `🎁 MYSTERY BOX UNLOCKED! Test #${idx + 1} passed: A clue about the Mafia's identity was discovered!`,
-              timestamp: Date.now()
-            });
+            if (!isMysteryForfeited) {
+              newlyUnlockedClues.push(clue);
+              room.activityLog.push({
+                id: uuidv4(),
+                type: "MYSTERY_UNLOCKED",
+                text: `🎁 MYSTERY BOX UNLOCKED! Test #${idx + 1} passed: A clue about the Mafia's identity was discovered!`,
+                timestamp: Date.now()
+              });
+            } else {
+              room.activityLog.push({
+                id: uuidv4(),
+                type: "MYSTERY_FORFEITED",
+                text: `⚠️ Test #${idx + 1} passed (Mystery Box clue forfeited due to AI Tactical Hint activation).`,
+                timestamp: Date.now()
+              });
+            }
           }
         }
       });
@@ -386,6 +406,39 @@ export class RoomManager {
     }
 
     return { room, testResults, newlyUnlockedClues };
+  }
+
+  useAiHint(roomCode, playerId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+
+    const player = room.players.get(playerId);
+    if (!player) return { error: "Player not found" };
+
+    if (!room.playersWithForfeitedMystery) {
+      room.playersWithForfeitedMystery = [];
+    }
+
+    if (player.usedAiHint || room.playersWithForfeitedMystery.includes(playerId)) {
+      return { error: "You have already used your 1 AI Hint for this mission!" };
+    }
+
+    player.usedAiHint = true;
+    if (room.playerWorkspaces?.has(playerId)) {
+      room.playerWorkspaces.get(playerId).usedAiHint = true;
+    }
+    if (!room.playersWithForfeitedMystery.includes(playerId)) {
+      room.playersWithForfeitedMystery.push(playerId);
+    }
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "AI_HINT_USED",
+      text: `💡 [AI TACTICAL HINT] ${player.name} activated their 1-time AI Hint! (Mystery Box clues forfeited)`,
+      timestamp: Date.now()
+    });
+
+    return { success: true, player, room };
   }
 
   callEmergencyMeeting(roomCode, callerId) {
@@ -613,7 +666,9 @@ export class RoomManager {
       phaseTimeRemaining: room.phaseTimeRemaining || 30,
       snapshotBeforeCode: (selfPlayer?.role === "MAFIA" || isGameOver) ? (room.snapshotBeforeCode || room.challenge?.starterCode) : null,
       surveillanceFeed,
-      unlockedMysteryClues: (selfPlayer?.role === "DEVELOPER" || isGameOver)
+      hasUsedAiHint: !!(selfPlayer?.usedAiHint || ws?.usedAiHint || room.playersWithForfeitedMystery?.includes(playerId)),
+      mysteryBoxForfeited: !!(selfPlayer?.usedAiHint || ws?.usedAiHint || room.playersWithForfeitedMystery?.includes(playerId)),
+      unlockedMysteryClues: (selfPlayer?.role === "DEVELOPER" || isGameOver) && !(selfPlayer?.usedAiHint || ws?.usedAiHint || room.playersWithForfeitedMystery?.includes(playerId))
         ? (room.mysteryRiddles || []).filter((_, idx) => (room.unlockedClueIndices || []).includes(idx))
         : [],
       totalMysteryCluesCount: room.mysteryRiddles?.length || (room.challenge?.testSuite?.length || 5),
