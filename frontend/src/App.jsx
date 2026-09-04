@@ -6,6 +6,7 @@ import { getStoredUser, logoutUser } from './services/auth';
 
 // Components
 import Navbar from './components/Navbar';
+import LandingPage from './components/LandingPage';
 import Lobby from './components/Lobby';
 import RoleModal from './components/RoleModal';
 import CodeEditor from './components/CodeEditor';
@@ -25,6 +26,7 @@ import AuthModal from './components/AuthModal';
 import { Bug, Sparkles, AlertCircle, FileCode, ShieldCheck, Activity, Search, MessageSquare, Gift, Trophy } from 'lucide-react';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'lobby'
   const [authUser, setAuthUser] = useState(getStoredUser());
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
@@ -633,6 +635,46 @@ export default function App() {
 
   const isInGame = room && (room.status === "PLAYING" || room.status === "VOTING" || room.status === "GAME_OVER");
 
+  // View 0: Cinematic AAA Landing Page
+  if (!room && currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onEnterLobby={() => setCurrentView('lobby')}
+          onOpenLeaderboard={() => setShowLeaderboardModal(true)}
+          onOpenProfile={() => {
+            if (authUser) setShowProfileModal(true);
+            else setShowAuthModal(true);
+          }}
+          onOpenAuth={() => setShowAuthModal(true)}
+          authUser={authUser}
+        />
+
+        {/* Global Modals accessible from Landing Page */}
+        <LeaderboardModal
+          isOpen={showLeaderboardModal}
+          onClose={() => setShowLeaderboardModal(false)}
+          currentUserId={authUser?.id}
+        />
+
+        <UserProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          user={authUser}
+        />
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={(user) => {
+            setAuthUser(user);
+            setShowAuthModal(false);
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#080b11] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white">
       {/* 5-second Auto-Close Countdown Toast / Banner */}
@@ -662,7 +704,7 @@ export default function App() {
         onLogout={() => { logoutUser(); setAuthUser(null); }}
         onOpenLeaderboard={() => setShowLeaderboardModal(true)}
         onOpenProfile={() => setShowProfileModal(true)}
-        onLeaveRoom={room ? handleLeaveRoom : null}
+        onLeaveRoom={room ? handleLeaveRoom : () => setCurrentView('landing')}
         isMuted={isVoiceMuted}
         isSpeaking={isVoiceSpeaking}
         onToggleMute={handleToggleVoiceMute}
@@ -673,16 +715,30 @@ export default function App() {
       <main className="flex-1 flex flex-col p-3 sm:p-6 max-w-7xl mx-auto w-full">
         {/* View 1: Lobby */}
         {(!room || room.status === "LOBBY") && (
-          <Lobby
-            room={room}
-            player={player}
-            authUser={authUser}
-            onCreateRoom={handleCreateRoom}
-            onJoinRoom={handleJoinRoom}
-            onStartGame={handleStartGame}
-            onToggleReady={handleToggleReady}
-            isConnecting={isConnecting}
-          />
+          <div className="space-y-4">
+            {!room && (
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('landing')}
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-slate-300 hover:text-white transition flex items-center space-x-1.5"
+                >
+                  <span>← BACK TO MAIN HQ</span>
+                </button>
+              </div>
+            )}
+
+            <Lobby
+              room={room}
+              player={player}
+              authUser={authUser}
+              onCreateRoom={handleCreateRoom}
+              onJoinRoom={handleJoinRoom}
+              onStartGame={handleStartGame}
+              onToggleReady={handleToggleReady}
+              isConnecting={isConnecting}
+            />
+          </div>
         )}
 
         {/* View 2: In-Game Coding Arena */}
