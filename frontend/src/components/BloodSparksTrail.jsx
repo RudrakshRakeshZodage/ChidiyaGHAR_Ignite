@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * Hyper-Realistic Large Bowie Knife & 60FPS Blood Particle Engine
+ * Photorealistic Realistic Combat Bowie Knife & 60FPS Blood Particle Engine
  * Features:
- * - Real-time rendered large tactical combat knife with Damascus steel blade, blood gutter, brass guard & leather hilt
- * - Dynamic knife slash tilt on click and motion velocity
- * - Dripping blood droplets & glowing sparks from razor tip
- * - Zero latency GPU-accelerated canvas overlay
+ * - Photorealistic 3D tactical hunting knife with brushed stainless steel blade, surgical mirror edge, blood fuller, brass guard & walnut combat grip
+ * - Dynamic weapon tilt physics with Iaijutsu combat slash on click
+ * - Dripping arterial blood droplets & glowing friction sparks
+ * - Hardware-accelerated 60FPS overlay
  */
 export default function BloodSparksTrail() {
   const canvasRef = useRef(null);
@@ -30,44 +30,43 @@ export default function BloodSparksTrail() {
 
     const particles = [];
     const bloodDrips = [];
-    const MAX_PARTICLES = 200;
+    const slashArcs = [];
+    const MAX_PARTICLES = 220;
 
     let mouseX = -100;
     let mouseY = -100;
     let smoothMouseX = -100;
     let smoothMouseY = -100;
     let isMouseDown = false;
-    let slashAngle = 0;
     let slashPower = 0;
     let lastMouseX = 0;
     let lastMouseY = 0;
-    let mouseVelocity = 0;
 
-    // Particle class for explosive blood sparks and mist
+    // Blood Spark Particles
     class SparkParticle {
       constructor(x, y, isBurst = false) {
         this.x = x;
         this.y = y;
         this.isBurst = isBurst;
         
-        const angle = isBurst ? Math.random() * Math.PI * 2 : (Math.random() * Math.PI * 0.8) + Math.PI * 0.6;
-        const speed = isBurst ? Math.random() * 6 + 2 : Math.random() * 2.5 + 0.5;
+        const angle = isBurst ? Math.random() * Math.PI * 2 : (Math.random() * Math.PI * 0.9) + Math.PI * 0.55;
+        const speed = isBurst ? Math.random() * 7 + 2.5 : Math.random() * 2.5 + 0.5;
         
         this.vx = Math.cos(angle) * speed + (Math.random() - 0.5) * 2;
         this.vy = Math.sin(angle) * speed + (isBurst ? (Math.random() - 0.5) * 3 : Math.random() * 2);
         
-        this.radius = isBurst ? Math.random() * 3.5 + 1.5 : Math.random() * 2.5 + 0.8;
+        this.radius = isBurst ? Math.random() * 3.5 + 1.2 : Math.random() * 2.2 + 0.8;
         this.alpha = 1;
         this.decay = isBurst ? Math.random() * 0.025 + 0.015 : Math.random() * 0.035 + 0.02;
-        this.gravity = 0.1;
+        this.gravity = 0.09;
 
         const colors = [
-          '#ff1e27', // Hot arterial red
+          '#ff1e27', // Hot arterial blood
           '#e31b23', // Rockstar red
-          '#b91c1c', // Dark crimson
-          '#7f1d1d', // Coagulated blood
-          '#ff6b6b', // Glowing ember
-          '#fcd34d'  // Rare gold friction spark
+          '#b91c1c', // Deep crimson
+          '#7f1d1d', // Coagulated dark blood
+          '#ffffff', // Steel glint
+          '#fcd34d'  // Friction spark
         ];
         this.color = colors[Math.floor(Math.random() * colors.length)];
       }
@@ -96,12 +95,12 @@ export default function BloodSparksTrail() {
     }
 
     // Dripping liquid blood droplet
-    class BloodDrip {
+    class BloodDroplet {
       constructor(x, y) {
         this.x = x;
         this.y = y;
         this.vy = Math.random() * 1.5 + 1;
-        this.radius = Math.random() * 2 + 1.2;
+        this.radius = Math.random() * 2.2 + 1.2;
         this.alpha = 0.95;
         this.decay = 0.018;
       }
@@ -117,13 +116,12 @@ export default function BloodSparksTrail() {
         context.save();
         context.globalAlpha = Math.max(0, this.alpha);
         context.fillStyle = '#b91c1c';
-        context.shadowBlur = 4;
+        context.shadowBlur = 5;
         context.shadowColor = '#e31b23';
         
         context.beginPath();
-        // Teardrop drip shape
         context.arc(this.x, this.y, this.radius, 0, Math.PI);
-        context.lineTo(this.x, this.y - this.radius * 2);
+        context.lineTo(this.x, this.y - this.radius * 2.2);
         context.closePath();
         context.fill();
         context.restore();
@@ -135,9 +133,7 @@ export default function BloodSparksTrail() {
       mouseY = e.clientY;
 
       const dist = Math.hypot(mouseX - lastMouseX, mouseY - lastMouseY);
-      mouseVelocity = dist;
 
-      // Spawn blood sparks and drips as knife cuts through air
       if (dist > 4) {
         const count = dist > 20 ? 3 : 1;
         for (let i = 0; i < count; i++) {
@@ -146,8 +142,8 @@ export default function BloodSparksTrail() {
           }
         }
 
-        if (Math.random() > 0.6 && bloodDrips.length < 50) {
-          bloodDrips.push(new BloodDrip(mouseX, mouseY + 2));
+        if (Math.random() > 0.55 && bloodDrips.length < 50) {
+          bloodDrips.push(new BloodDroplet(mouseX, mouseY + 2));
         }
       }
 
@@ -159,15 +155,23 @@ export default function BloodSparksTrail() {
       isMouseDown = true;
       slashPower = 1.0;
 
-      // Explosive blood burst on slash
-      for (let i = 0; i < 24; i++) {
-        if (particles.length < MAX_PARTICLES + 40) {
+      // Slash arc effect
+      slashArcs.push({
+        x: e.clientX,
+        y: e.clientY,
+        alpha: 1.0,
+        radius: 38
+      });
+
+      // Explosive blood burst on knife strike
+      for (let i = 0; i < 28; i++) {
+        if (particles.length < MAX_PARTICLES + 50) {
           particles.push(new SparkParticle(e.clientX, e.clientY, true));
         }
       }
 
-      for (let i = 0; i < 6; i++) {
-        bloodDrips.push(new BloodDrip(e.clientX + (Math.random() - 0.5) * 10, e.clientY + (Math.random() - 0.5) * 10));
+      for (let i = 0; i < 8; i++) {
+        bloodDrips.push(new BloodDroplet(e.clientX + (Math.random() - 0.5) * 12, e.clientY + (Math.random() - 0.5) * 12));
       }
     };
 
@@ -179,131 +183,199 @@ export default function BloodSparksTrail() {
     window.addEventListener('mousedown', handleMouseDown, { passive: true });
     window.addEventListener('mouseup', handleMouseUp, { passive: true });
 
-    // Draw Real Knife Function
-    const drawRealKnife = (context, x, y, angle, isSlashing) => {
+    // Draw Photorealistic Real Combat Hunting Knife (Realistic Size & Depth)
+    const drawPhotorealisticKnife = (context, x, y, isSlashing, power) => {
       if (x < 0 || y < 0) return;
 
       context.save();
       context.translate(x, y);
-      context.rotate(angle);
+      
+      // Dynamic slash angle
+      const rotation = isSlashing ? -0.42 : (power > 0 ? -0.28 * power : -0.06);
+      context.rotate(rotation);
 
-      // Slash scale bounce
-      const scale = isSlashing ? 1.15 : 1.0;
+      // Realistic large weapon scale
+      const scale = isSlashing ? 1.2 : 1.08;
       context.scale(scale, scale);
 
-      // ==========================================
-      // 1. BLADE (Steel with realistic sheen & bevel)
-      // ==========================================
-      context.beginPath();
-      context.moveTo(0, 0); // Razor sharp tip
-      context.bezierCurveTo(8, 2, 28, 8, 38, 14); // Curved razor cutting edge
-      context.lineTo(34, 20); // Blade base
-      context.lineTo(6, 12); // Back spine
-      context.lineTo(0, 0); // Tip
-      context.closePath();
-
-      // Damascus / Carbon Steel Metallic Gradient
-      const bladeGrad = context.createLinearGradient(0, 0, 35, 18);
-      bladeGrad.addColorStop(0, '#ffffff'); // Glint at razor tip
-      bladeGrad.addColorStop(0.2, '#e2e8f0'); // Polished steel
-      bladeGrad.addColorStop(0.5, '#94a3b8'); // Dark steel
-      bladeGrad.addColorStop(0.8, '#475569'); // Carbon steel shadow
-      bladeGrad.addColorStop(1, '#1e293b');
-      context.fillStyle = bladeGrad;
-      context.shadowBlur = isSlashing ? 15 : 8;
-      context.shadowColor = '#e31b23';
-      context.fill();
-
-      // Blade Edge Highlight
-      context.lineWidth = 1.2;
-      context.strokeStyle = '#f8fafc';
-      context.stroke();
-
-      // Blood Groove / Fuller (center channel)
-      context.beginPath();
-      context.moveTo(6, 4);
-      context.lineTo(28, 13);
-      context.lineWidth = 1.5;
-      context.strokeStyle = '#0f172a';
-      context.stroke();
-
-      // ==========================================
-      // 2. FRESH BLOOD ON BLADE TIP
-      // ==========================================
-      context.beginPath();
-      context.moveTo(0, 0);
-      context.bezierCurveTo(4, 1.5, 14, 4, 18, 8);
-      context.lineTo(12, 11);
-      context.lineTo(3, 4);
-      context.closePath();
-
-      const bloodGrad = context.createLinearGradient(0, 0, 18, 8);
-      bloodGrad.addColorStop(0, '#ff1e27');
-      bloodGrad.addColorStop(0.6, '#b91c1c');
-      bloodGrad.addColorStop(1, '#7f1d1d');
-      context.fillStyle = bloodGrad;
-      context.shadowBlur = 10;
-      context.shadowColor = '#ff1e27';
-      context.fill();
-
-      // ==========================================
-      // 3. BRASS CROSSGUARD
-      // ==========================================
+      // 0. Realistic Drop Shadow underneath weapon
       context.save();
-      context.translate(34, 16);
-      context.rotate(Math.PI / 4);
-      
-      const guardGrad = context.createLinearGradient(-6, -2, 6, 2);
-      guardGrad.addColorStop(0, '#fef08a');
-      guardGrad.addColorStop(0.5, '#d97706');
-      guardGrad.addColorStop(1, '#78350f');
-      context.fillStyle = guardGrad;
-      context.strokeStyle = '#451a03';
-      context.lineWidth = 0.8;
+      context.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      context.shadowBlur = 12;
+      context.shadowOffsetX = 8;
+      context.shadowOffsetY = 12;
 
+      // ==========================================
+      // 1. BLADE BODY (Forged Carbon / Stainless Steel)
+      // ==========================================
       context.beginPath();
-      context.roundRect(-4, -10, 8, 20, 2);
+      context.moveTo(0, 0); // Razor sharp pointed tip (Hotspot at 0,0)
+      // Curved clip-point cutting edge (Bowie style)
+      context.bezierCurveTo(12, 3, 34, 10, 52, 18);
+      context.lineTo(48, 26); // Base choil / ricasso
+      // Thick heavy spine with swedge
+      context.bezierCurveTo(28, 14, 10, 4, 0, 0);
+      context.closePath();
+
+      // Multi-tone metallic steel gradient
+      const steelGrad = context.createLinearGradient(0, 0, 52, 22);
+      steelGrad.addColorStop(0, '#ffffff'); // Specular razor highlight
+      steelGrad.addColorStop(0.15, '#f8fafc'); // High polish bevel
+      steelGrad.addColorStop(0.35, '#cbd5e1'); // Stainless steel sheen
+      steelGrad.addColorStop(0.65, '#94a3b8'); // Brushed steel
+      steelGrad.addColorStop(0.85, '#475569'); // Dark bevel shadow
+      steelGrad.addColorStop(1, '#1e293b'); // Tang base
+      context.fillStyle = steelGrad;
       context.fill();
-      context.stroke();
       context.restore();
 
-      // ==========================================
-      // 4. OUTLAW LEATHER-WRAPPED HANDLE (HILT)
-      // ==========================================
-      context.save();
-      context.translate(36, 18);
-      
-      // Handle Core
+      // Razor Edge Mirror Polish (Secondary Hollow Ground Bevel)
       context.beginPath();
       context.moveTo(0, 0);
-      context.lineTo(22, 22);
-      context.lineWidth = 7.5;
-      context.lineCap = 'round';
-      context.strokeStyle = '#18181b';
+      context.bezierCurveTo(10, 2.5, 30, 8, 50, 17);
+      context.lineWidth = 1.4;
+      context.strokeStyle = '#ffffff';
+      context.shadowBlur = 8;
+      context.shadowColor = '#ffffff';
       context.stroke();
 
-      // Leather Grip Wraps / Ribs
-      context.lineWidth = 1.8;
-      context.strokeStyle = '#d97706';
-      for (let i = 4; i < 20; i += 4) {
+      // Blood Fuller / Deep Gutter Channel
+      context.beginPath();
+      context.moveTo(10, 5);
+      context.lineTo(42, 16);
+      context.lineWidth = 2.2;
+      context.strokeStyle = '#0f172a';
+      context.shadowBlur = 1;
+      context.stroke();
+      
+      // Fuller interior highlight
+      context.beginPath();
+      context.moveTo(11, 5.5);
+      context.lineTo(41, 16.5);
+      context.lineWidth = 0.8;
+      context.strokeStyle = '#64748b';
+      context.stroke();
+
+      // Spine Tactical Serrations
+      context.strokeStyle = '#334155';
+      context.lineWidth = 1.2;
+      for (let i = 24; i <= 44; i += 4) {
         context.beginPath();
-        context.moveTo(i - 3, i + 3);
-        context.lineTo(i + 3, i - 3);
+        context.moveTo(i, (i * 0.38) - 1);
+        context.lineTo(i + 2, (i * 0.38) + 1.5);
         context.stroke();
       }
 
-      // Brass Skull / Ring Pommel
+      // ==========================================
+      // 2. FRESH REALISTIC BLOOD DRIP ON RAZOR TIP
+      // ==========================================
       context.beginPath();
-      context.arc(24, 24, 4, 0, Math.PI * 2);
-      const pommelGrad = context.createRadialGradient(23, 23, 1, 24, 24, 4);
+      context.moveTo(0, 0);
+      context.bezierCurveTo(6, 2, 18, 5.5, 24, 9);
+      context.lineTo(19, 12);
+      context.bezierCurveTo(10, 5, 2, 1, 0, 0);
+      context.closePath();
+
+      const bloodGrad = context.createLinearGradient(0, 0, 24, 10);
+      bloodGrad.addColorStop(0, '#ff1e27'); // Arterial red
+      bloodGrad.addColorStop(0.5, '#b91c1c'); // Crimson
+      bloodGrad.addColorStop(1, '#660000'); // Deep coagulated
+      context.fillStyle = bloodGrad;
+      context.shadowBlur = 12;
+      context.shadowColor = '#ff1e27';
+      context.fill();
+
+      // Specular highlight on liquid blood
+      context.beginPath();
+      context.arc(3, 1.5, 1.2, 0, Math.PI * 2);
+      context.fillStyle = '#ffffff';
+      context.fill();
+
+      // ==========================================
+      // 3. SOLID BRASS CROSSGUARD / BOLSTER
+      // ==========================================
+      context.save();
+      context.translate(50, 22);
+      context.rotate(Math.PI / 3.8);
+
+      const brassGrad = context.createLinearGradient(-5, -12, 5, 12);
+      brassGrad.addColorStop(0, '#fef08a'); // Gold sheen
+      brassGrad.addColorStop(0.4, '#f59e0b'); // Polished brass
+      brassGrad.addColorStop(0.8, '#b45309'); // Antique bronze
+      brassGrad.addColorStop(1, '#451a03'); // Shadow
+      context.fillStyle = brassGrad;
+      context.strokeStyle = '#271004';
+      context.lineWidth = 1;
+
+      context.beginPath();
+      context.roundRect(-4.5, -12, 9, 24, 3);
+      context.fill();
+      context.stroke();
+
+      // Brass Guard Rivet
+      context.beginPath();
+      context.arc(0, 0, 1.8, 0, Math.PI * 2);
+      context.fillStyle = '#fef08a';
+      context.fill();
+      context.restore();
+
+      // ==========================================
+      // 4. REALISTIC WALNUT WOOD & LEATHER TACTICAL GRIP
+      // ==========================================
+      context.save();
+      context.translate(53, 24);
+
+      // Handle Core (Dark Oiled Walnut / Ribbed Grip)
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.lineTo(28, 28);
+      context.lineWidth = 11;
+      context.lineCap = 'round';
+      
+      const woodGrad = context.createLinearGradient(0, 0, 28, 28);
+      woodGrad.addColorStop(0, '#3f1a0a'); // Dark walnut
+      woodGrad.addColorStop(0.3, '#572611'); // Rich woodgrain
+      woodGrad.addColorStop(0.6, '#2b1005'); // Deep shadow
+      woodGrad.addColorStop(1, '#180a03');
+      context.strokeStyle = woodGrad;
+      context.stroke();
+
+      // Ergonomic Finger Grooves & Brass Pins
+      context.lineWidth = 2.2;
+      context.strokeStyle = '#180a03';
+      for (let i = 5; i <= 24; i += 6) {
+        context.beginPath();
+        context.moveTo(i - 4, i + 4);
+        context.lineTo(i + 4, i - 4);
+        context.stroke();
+
+        // Brass handle rivet pins
+        context.beginPath();
+        context.arc(i, i, 1.3, 0, Math.PI * 2);
+        context.fillStyle = '#fcd34d';
+        context.fill();
+      }
+
+      // ==========================================
+      // 5. SOLID BRASS BUTT CAP / SKULL CRUSHER POMMEL
+      // ==========================================
+      context.beginPath();
+      context.arc(30, 30, 5.5, 0, Math.PI * 2);
+      const pommelGrad = context.createRadialGradient(28, 28, 1, 30, 30, 6);
       pommelGrad.addColorStop(0, '#fef08a');
-      pommelGrad.addColorStop(0.7, '#d97706');
+      pommelGrad.addColorStop(0.6, '#d97706');
       pommelGrad.addColorStop(1, '#451a03');
       context.fillStyle = pommelGrad;
       context.fill();
       context.strokeStyle = '#78350f';
       context.lineWidth = 1;
       context.stroke();
+
+      // Lanyard Hole in Pommel
+      context.beginPath();
+      context.arc(30, 30, 2, 0, Math.PI * 2);
+      context.fillStyle = '#0f0702';
+      context.fill();
 
       context.restore();
       context.restore();
@@ -314,18 +386,35 @@ export default function BloodSparksTrail() {
       ctx.clearRect(0, 0, width, height);
 
       // Smooth mouse interpolation
-      smoothMouseX += (mouseX - smoothMouseX) * 0.45;
-      smoothMouseY += (mouseY - smoothMouseY) * 0.45;
+      smoothMouseX += (mouseX - smoothMouseX) * 0.52;
+      smoothMouseY += (mouseY - smoothMouseY) * 0.52;
 
-      // Slash power decay
       if (slashPower > 0) {
-        slashPower -= 0.05;
-        slashAngle = Math.sin(slashPower * Math.PI) * -0.35;
-      } else {
-        slashAngle = Math.sin(Date.now() * 0.003) * 0.03;
+        slashPower -= 0.055;
       }
 
-      // 1. Draw blood particles
+      // 1. Draw Slash Arc Trails
+      for (let i = slashArcs.length - 1; i >= 0; i--) {
+        const arc = slashArcs[i];
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, arc.alpha);
+        ctx.strokeStyle = '#ff1e27';
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#ff1e27';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(arc.x, arc.y, arc.radius, -Math.PI / 3, Math.PI / 3);
+        ctx.stroke();
+        ctx.restore();
+
+        arc.alpha -= 0.06;
+        arc.radius += 2.5;
+        if (arc.alpha <= 0) {
+          slashArcs.splice(i, 1);
+        }
+      }
+
+      // 2. Draw blood particles
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.update();
@@ -335,7 +424,7 @@ export default function BloodSparksTrail() {
         }
       }
 
-      // 2. Draw blood drips
+      // 3. Draw blood drips
       for (let i = bloodDrips.length - 1; i >= 0; i--) {
         const d = bloodDrips[i];
         d.update();
@@ -345,8 +434,8 @@ export default function BloodSparksTrail() {
         }
       }
 
-      // 3. Draw Real HD Knife at mouse tip
-      drawRealKnife(ctx, smoothMouseX, smoothMouseY, slashAngle, isMouseDown || slashPower > 0.1);
+      // 4. Draw Real Photorealistic Combat Knife
+      drawPhotorealisticKnife(ctx, smoothMouseX, smoothMouseY, isMouseDown, slashPower);
 
       animationFrameId = requestAnimationFrame(render);
     };

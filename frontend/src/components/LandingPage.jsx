@@ -57,13 +57,13 @@ export default function LandingPage({
     <div className="min-h-screen bg-[#050505] text-[#e5e5e5] font-sans selection:bg-[#e31b23] selection:text-white relative overflow-x-hidden">
       
       {/* ========================================================================= */}
-      {/* 1. TOP UTILITY STRIP (ROCKSTAR STYLE) */}
+      {/* 1. TOP UTILITY STRIP (GLASSMORHPISM) */}
       {/* ========================================================================= */}
-      <div className="bg-black border-b border-[#1c1c1c] text-[10px] font-mono tracking-widest px-4 sm:px-12 py-2 flex items-center justify-between z-40 relative select-none">
+      <div className="bg-black/40 backdrop-blur-xl border-b border-white/10 text-[10px] font-mono tracking-widest px-4 sm:px-12 py-2 flex items-center justify-between z-40 relative select-none">
         <div className="flex items-center space-x-2">
-          <span className="text-[#e31b23] font-black uppercase tracking-widest">OUTLAWS FOR LIFE.</span>
+          <span className="text-[#e31b23] font-black uppercase tracking-widest drop-shadow-[0_0_8px_rgba(227,27,35,0.8)]">OUTLAWS FOR LIFE.</span>
         </div>
-        <div className="flex items-center space-x-6 text-[#888888] font-bold">
+        <div className="flex items-center space-x-6 text-[#aaaaaa] font-bold">
           <a href="https://github.com/RudrakshRakeshZodage/ChidiyaGHAR_Ignite" target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center space-x-1">
             <span>CHIDIYAGHAR GAMES</span>
             <span className="text-[9px]">↗</span>
@@ -79,23 +79,23 @@ export default function LandingPage({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN HEADER (RDR2 LOGO + HORIZONTAL NAVIGATION) */}
+      {/* 2. MAIN HEADER (FROSTED GLASSMORHPISM) */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-50 bg-[#080808]/95 backdrop-blur-md border-b border-[#202020] px-4 sm:px-12 py-4 flex items-center justify-between select-none">
+      <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/15 px-4 sm:px-12 py-3.5 flex items-center justify-between select-none shadow-2xl shadow-black/80">
         {/* Logo */}
         <div className="flex items-center space-x-3 cursor-pointer" onClick={onEnterLobby}>
           <div className="flex items-center tracking-tighter">
-            <span className="text-2xl sm:text-3xl font-black font-['Bebas_Neue'] tracking-wider text-white">
+            <span className="text-2xl sm:text-3xl font-black font-['Bebas_Neue'] tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
               CODE MAFIA
             </span>
-            <span className="ml-1.5 text-3xl font-black text-[#e31b23] font-serif">
+            <span className="ml-1.5 text-3xl font-black text-[#e31b23] font-serif drop-shadow-[0_0_12px_rgba(227,27,35,0.8)]">
               II
             </span>
           </div>
         </div>
 
         {/* Center Nav Links */}
-        <nav className="hidden lg:flex items-center space-x-8 text-xs font-black uppercase tracking-widest text-[#cccccc]">
+        <nav className="hidden lg:flex items-center space-x-8 text-xs font-black uppercase tracking-widest text-[#e0e0e0]">
           <a href="#hero" className="text-[#e31b23] border-b-2 border-[#e31b23] pb-1 transition">HOME</a>
           <a href="#story" className="hover:text-[#e31b23] transition">STORY</a>
           <a href="#features" className="hover:text-[#e31b23] transition">GAMEPLAY</a>
@@ -116,115 +116,71 @@ export default function LandingPage({
           </button>
           <button
             onClick={onEnterLobby}
-            className="px-4 py-2 rounded bg-[#e31b23] hover:bg-[#c9181f] text-white font-black text-xs uppercase tracking-widest transition shadow-lg flex items-center space-x-1"
+            className="px-4 py-2 rounded-lg bg-[#e31b23] hover:bg-[#c9181f] text-white font-['Bebas_Neue'] tracking-wider text-sm transition shadow-lg shadow-rose-950/60 flex items-center space-x-1 border border-red-400"
           >
-            <span>PLAY (0)</span>
+            <span>PLAY NOW</span>
           </button>
         </div>
       </header>
 
       {/* ========================================================================= */}
-      {/* 3. HERO SECTION (ATMOSPHERIC BLOOD MOON & NOIR OUTLAW) */}
+      {/* 3. HERO SECTION (FULLSCREEN RDR2 BLOOD MOON IMAGE BACKDROP + OVERLAID TEXT) */}
       {/* ========================================================================= */}
-      <section id="hero" className="relative min-h-[88vh] flex items-center px-4 sm:px-12 py-16 overflow-hidden bg-gradient-to-r from-black via-[#140003] to-[#250207]">
-        
-        {/* Gigantic Blood Red Moon & Silhouette Backdrop */}
-        <div className="absolute right-0 top-0 bottom-0 w-full lg:w-3/5 pointer-events-none overflow-hidden flex items-center justify-end">
-          {/* Glowing Blood Moon */}
-          <div className="absolute right-8 top-12 w-[340px] sm:w-[480px] h-[340px] sm:h-[480px] rounded-full bg-gradient-to-br from-[#ff2a34] via-[#b8000b] to-[#400004] opacity-90 blur-sm shadow-[0_0_120px_rgba(227,27,35,0.7)]" />
-          
-          {/* Mist / Cloud Vignettes */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
+      <section 
+        id="hero" 
+        className="relative min-h-[92vh] flex items-center px-4 sm:px-12 py-16 overflow-hidden bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url('/images/rdr2_blood_moon.jpg')` }}
+      >
+        {/* Cinematic Noir Shadow Vignette Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/45 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/50 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,transparent_40%,rgba(0,0,0,0.85)_100%)] pointer-events-none" />
 
-          {/* SVG Outlaw Cat Silhouette on Horse / Trenchcoat Silhouette */}
-          <svg viewBox="0 0 500 600" className="w-full h-full max-w-[550px] relative z-10 opacity-95 drop-shadow-2xl">
-            {/* Dark Horizon & Smoke */}
-            <path d="M 0 550 Q 250 510 500 550 L 500 600 L 0 600 Z" fill="#050505" />
-            
-            {/* Outlaw Cat Silhouette */}
-            <g transform="translate(140, 110) scale(1.15)">
-              {/* Wide Brim Fedora / Cowboy Hat */}
-              <ellipse cx="120" cy="110" rx="90" ry="20" fill="#080808" />
-              <path d="M 60 110 Q 120 40 180 110 Z" fill="#0a0a0a" />
-              
-              {/* Ears popping through */}
-              <polygon points="65,95 80,45 95,85" fill="#080808" />
-              <polygon points="175,95 160,45 145,85" fill="#080808" />
-              
-              {/* Cat Whiskers in Red Glow */}
-              <line x1="60" y1="140" x2="10" y2="135" stroke="#ff4d55" strokeWidth="1.5" opacity="0.6" />
-              <line x1="60" y1="150" x2="15" y2="155" stroke="#ff4d55" strokeWidth="1.5" opacity="0.6" />
-              <line x1="180" y1="140" x2="230" y2="135" stroke="#ff4d55" strokeWidth="1.5" opacity="0.6" />
-              <line x1="180" y1="150" x2="225" y2="155" stroke="#ff4d55" strokeWidth="1.5" opacity="0.6" />
-
-              {/* Glowing Eyes */}
-              <ellipse cx="95" cy="130" rx="8" ry="10" fill="#ffb833" opacity="0.9" />
-              <ellipse cx="145" cy="130" rx="8" ry="10" fill="#ffb833" opacity="0.9" />
-              <ellipse cx="95" cy="130" rx="2" ry="8" fill="#000" />
-              <ellipse cx="145" cy="130" rx="2" ry="8" fill="#000" />
-
-              {/* Trenchcoat / Shoulders */}
-              <path d="M 30 350 L 50 180 L 190 180 L 210 350 Z" fill="#080808" />
-              <path d="M 90 180 L 120 280 L 150 180 Z" fill="#140003" stroke="#e31b23" strokeWidth="1" />
-              
-              {/* Smoking Gun / Revolver Silhouette */}
-              <rect x="180" y="220" width="45" height="14" fill="#151515" rx="2" />
-              <rect x="225" y="224" width="25" height="6" fill="#202020" rx="1" />
-              <circle cx="250" cy="227" r="3" fill="#e31b23" opacity="0.8" />
-              
-              {/* Smoke Wisp from gun */}
-              <path d="M 255 227 Q 280 200 270 170 Q 290 140 280 110" fill="none" stroke="#ffffff" strokeWidth="2" opacity="0.3" />
-            </g>
-          </svg>
-        </div>
-
-        {/* Hero Left Typography (Matching RDR2) */}
+        {/* Hero Left Typography Overlaid directly onto Image */}
         <div className="max-w-xl w-full relative z-20 space-y-6">
-          <div className="space-y-1">
-            <span className="text-xs font-serif font-black tracking-widest text-[#e31b23] uppercase block">
-              CHIDIYAGHAR GAMES PRESENTS
-            </span>
+          <div className="space-y-2">
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[#e31b23]/80 text-[#e31b23] text-xs font-mono font-black uppercase tracking-widest shadow-xl">
+              <span>★ CHIDIYAGHAR GAMES PRESENTS</span>
+            </div>
 
             {/* Massive Distressed Western Title */}
-            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black font-['Bebas_Neue'] tracking-tight text-white leading-none drop-shadow-[0_4px_25px_rgba(0,0,0,0.9)]">
+            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black font-['Bebas_Neue'] tracking-tight text-white leading-none drop-shadow-[0_6px_30px_rgba(0,0,0,0.95)]">
               RED DEAD <br />
-              <span className="text-[#e31b23]">CODE MAFIA</span> <span className="text-white font-serif">II</span>
+              <span className="text-[#e31b23] drop-shadow-[0_0_25px_rgba(227,27,35,0.7)]">CODE MAFIA</span> <span className="text-white font-serif">II</span>
             </h1>
 
             {/* Red Star Divider */}
             <div className="flex items-center space-x-3 py-1">
-              <div className="w-10 h-[2px] bg-[#e31b23]" />
-              <span className="text-[#e31b23] text-sm">★</span>
-              <div className="w-10 h-[2px] bg-[#e31b23]" />
+              <div className="w-12 h-[2px] bg-[#e31b23]" />
+              <span className="text-[#e31b23] text-base drop-shadow-[0_0_8px_rgba(227,27,35,0.8)]">★</span>
+              <div className="w-12 h-[2px] bg-[#e31b23]" />
             </div>
           </div>
 
-          <div className="space-y-1 text-sm font-['Montserrat'] font-bold text-[#e0e0e0] tracking-wider uppercase">
-            <div>SILICON SYNDICATE, 2026.</div>
-            <div className="text-[#999999]">THE ERA OF CLEAN CODE HAS COME TO AN END.</div>
+          <div className="space-y-1 text-sm sm:text-base font-['Montserrat'] font-extrabold text-[#f0f0f0] tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+            <div className="text-white">SILICON SYNDICATE, 2026.</div>
+            <div className="text-[#bbbbbb]">THE ERA OF CLEAN CODE HAS COME TO AN END.</div>
           </div>
 
-          {/* Action Buttons (Solid Red Rectangular + Watch Trailer) */}
-          <div className="flex flex-wrap items-center gap-4 pt-3">
+          {/* Action Buttons (Glass & Blood-Red Rectangular) */}
+          <div className="flex flex-wrap items-center gap-4 pt-4">
             <button
               onClick={onEnterLobby}
-              className="px-7 py-3.5 bg-[#e31b23] hover:bg-[#b8141b] text-white font-black font-['Montserrat'] text-xs uppercase tracking-widest transition flex items-center space-x-2 shadow-2xl"
+              className="px-8 py-4 bg-[#e31b23] hover:bg-[#b8141b] text-white font-['Bebas_Neue'] tracking-wider text-xl uppercase transition flex items-center space-x-2 shadow-2xl shadow-rose-950/80 border border-red-400 active:scale-95"
             >
-              <span>PLAY NOW</span>
-              <span className="text-sm font-bold">❯</span>
+              <span>ENTER MULTIPLAYER ARENA</span>
+              <span className="text-lg font-bold">❯</span>
             </button>
 
             <button
               onClick={() => setSelectedVideo(MEDIA_ITEMS[0])}
-              className="px-6 py-3.5 bg-transparent hover:text-white text-[#cccccc] font-black font-['Montserrat'] text-xs uppercase tracking-widest transition flex items-center space-x-2 border-b-2 border-transparent hover:border-white"
+              className="px-7 py-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white font-['Bebas_Neue'] tracking-wider text-lg uppercase transition flex items-center space-x-2 border-2 border-white/20 hover:border-white active:scale-95 shadow-xl"
             >
+              <Video className="h-4 w-4 text-[#e31b23]" />
               <span>WATCH TRAILER</span>
-              <span className="text-xs text-[#e31b23]">▶</span>
             </button>
           </div>
         </div>
-
       </section>
 
       {/* ========================================================================= */}
@@ -323,68 +279,75 @@ export default function LandingPage({
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. THE STORY (ARTHUR MORGAN STYLE CINEMATIC SECTION) */}
+      {/* 5. THE STORY (ARTHUR MORGAN CINEMATIC OUTLAW SHOWCASE) */}
       {/* ========================================================================= */}
-      <section id="story" className="py-20 px-4 sm:px-12 bg-gradient-to-r from-black via-[#140003] to-black relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <section 
+        id="story" 
+        className="py-24 px-4 sm:px-12 bg-[#080002] relative overflow-hidden bg-cover bg-center bg-no-repeat border-t border-[#1f1013]"
+        style={{ backgroundImage: `linear-gradient(to right, rgba(5,5,5,0.95) 0%, rgba(10,0,3,0.85) 45%, rgba(20,0,5,0.7) 100%), url('/images/rdr2_arthur_story.png')` }}
+      >
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#e31b23]/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
           
           {/* Left Text Block */}
           <div className="lg:col-span-6 space-y-6">
-            <span className="text-xs font-serif font-black tracking-widest text-[#e31b23] uppercase block">
-              THE STORY
+            <span className="text-xs font-serif font-black tracking-widest text-[#e31b23] uppercase block drop-shadow">
+              ★ THE STORY & LORE
             </span>
 
-            <h2 className="text-5xl sm:text-6xl md:text-7xl font-black font-['Bebas_Neue'] tracking-tight text-white leading-none">
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-black font-['Bebas_Neue'] tracking-tight text-white leading-none drop-shadow-[0_4px_25px_rgba(0,0,0,0.9)]">
               LOYALTY. <br />
               HONOR. <br />
-              <span className="text-[#e31b23]">REDEMPTION.</span>
+              <span className="text-[#e31b23] drop-shadow-[0_0_25px_rgba(227,27,35,0.8)]">REDEMPTION.</span>
             </h2>
 
-            <p className="text-xs sm:text-sm text-[#b0b0b0] font-medium leading-relaxed">
+            <p className="text-sm text-[#d4d4d4] font-medium leading-relaxed font-sans">
               Arthur Morgan and the Van der Linde gang are outlaws on the run. With federal agents and the best
               bounty hunters in the nation closing in, the gang must rob, steal, and fight their way across
               America to survive.
             </p>
 
-            <p className="text-xs text-[#888888] leading-relaxed">
+            <p className="text-xs text-[#9e9e9e] leading-relaxed font-sans">
               In Code Mafia II, an undercover saboteur lurks in your developer sprint. Corrupted pull requests,
               inverted boundaries, and hidden syntax traps threaten the codebase. Unmask the traitor before deployment.
             </p>
 
-            <button
-              onClick={onEnterLobby}
-              className="px-7 py-3.5 bg-[#e31b23] hover:bg-[#b8141b] text-white font-black font-['Montserrat'] text-xs uppercase tracking-widest transition flex items-center space-x-2"
-            >
-              <span>EXPLORE THE STORY</span>
-              <span>❯</span>
-            </button>
+            <div className="pt-2 flex flex-wrap items-center gap-4">
+              <button
+                onClick={onEnterLobby}
+                className="px-8 py-3.5 bg-[#e31b23] hover:bg-[#b8141b] text-white font-['Bebas_Neue'] tracking-wider text-lg uppercase transition flex items-center space-x-2 shadow-2xl shadow-rose-950/80 border border-red-400 active:scale-95"
+              >
+                <span>ENTER THE LORE</span>
+                <span>❯</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right: Character Portrait Frame */}
+          {/* Right: Arthur Morgan Portrait Spotlight Card */}
           <div className="lg:col-span-6 flex justify-center">
-            <div className="relative w-full max-w-md aspect-[4/5] rounded-xl overflow-hidden border-2 border-[#330005] bg-gradient-to-b from-[#220005] to-black shadow-2xl p-6 flex flex-col justify-between">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#e31b23]/20 rounded-full blur-3xl pointer-events-none" />
-              
+            <div className="relative w-full max-w-lg rounded-2xl overflow-hidden border-2 border-[#e31b23]/60 bg-gradient-to-b from-black via-[#140003] to-black shadow-2xl shadow-rose-950/80 p-5 flex flex-col justify-between">
               <div className="relative z-10 flex items-center justify-between border-b border-[#3a0008] pb-3">
-                <span className="text-xs font-mono font-bold text-[#e31b23] tracking-widest">WANTED: DEAD OR ALIVE</span>
-                <span className="text-[10px] font-mono text-[#888]">$5,000 BOUNTY</span>
+                <span className="text-xs font-mono font-black text-[#e31b23] tracking-widest uppercase">WANTED: DEAD OR ALIVE</span>
+                <span className="text-xs font-mono font-bold text-[#fcd34d] px-2 py-0.5 rounded bg-black/80 border border-[#d97706]">$5,000 BOUNTY</span>
               </div>
 
-              {/* Centered Cat Mafia Portrait */}
-              <div className="w-full flex justify-center my-4">
-                <div className="w-44 aspect-[4/5]">
-                  <CatTarotCard
-                    player={{ name: "ARTHUR CAT", role: "MAFIA", isAlive: true }}
-                    index={1}
-                    isSelectable={false}
-                    badgeText="OUTLAW DON"
-                  />
+              {/* Arthur Morgan High-Res Image Display */}
+              <div className="w-full my-3 rounded-xl overflow-hidden border border-[#2d1215] shadow-inner relative group">
+                <img 
+                  src="/images/rdr2_arthur_story.png" 
+                  alt="Arthur Morgan" 
+                  className="w-full h-72 object-cover object-center transform group-hover:scale-105 transition-transform duration-700" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-3 left-4 text-white font-['Bebas_Neue'] text-2xl tracking-wider drop-shadow-lg">
+                  ARTHUR MORGAN
                 </div>
               </div>
 
-              <div className="relative z-10 text-center border-t border-[#3a0008] pt-3">
+              <div className="relative z-10 text-center border-t border-[#3a0008] pt-3 flex items-center justify-between">
                 <div className="text-sm font-['Bebas_Neue'] tracking-wider text-white">THE SYNDICATE SABOTEUR</div>
-                <div className="text-[10px] text-[#888] font-mono">SILICON UNDERWORLD • 2026</div>
+                <div className="text-[10px] text-[#fcd34d] font-mono font-bold uppercase">VAN DER LINDE GANG</div>
               </div>
             </div>
           </div>

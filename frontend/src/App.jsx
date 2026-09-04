@@ -695,7 +695,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white relative">
+    <div 
+      className="min-h-screen flex flex-col text-slate-100 selection:bg-rose-500 selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{
+        backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.86) 0%, rgba(18,2,5,0.92) 50%, rgba(5,5,5,0.96) 100%), url('/images/rdr2_blood_moon.jpg')`
+      }}
+    >
       {/* Global Interactive Blood Sparks & Knife Cursor Canvas */}
       <BloodSparksTrail />
       {/* 5-second Auto-Close Countdown Toast / Banner */}
