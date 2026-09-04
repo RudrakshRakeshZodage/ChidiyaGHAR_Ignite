@@ -666,13 +666,16 @@ export default function App() {
         <LeaderboardModal
           isOpen={showLeaderboardModal}
           onClose={() => setShowLeaderboardModal(false)}
-          currentUserId={authUser?.id}
+          player={player}
+          authUser={authUser}
+          room={room}
         />
 
         <UserProfileModal
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
-          user={authUser}
+          player={player}
+          authUser={authUser}
         />
 
         <AuthModal

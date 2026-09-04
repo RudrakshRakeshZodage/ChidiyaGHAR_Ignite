@@ -73,7 +73,7 @@ export default function LandingPage({
             <span className="text-[9px]">↗</span>
           </button>
           <button onClick={authUser ? onOpenProfile : onOpenAuth} className="hover:text-[#e31b23] transition flex items-center space-x-1">
-            <span>{authUser ? authUser.name.toUpperCase() : "SUPPORT"}</span>
+            <span>{authUser ? (authUser.username || authUser.name || authUser.email?.split("@")[0] || "OPERATIVE").toUpperCase() : "SUPPORT"}</span>
           </button>
         </div>
       </div>
