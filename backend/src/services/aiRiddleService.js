@@ -1,12 +1,12 @@
 /**
  * AI Riddle Service for Code Mafia Mystery Box
  * Generates witty, one-sentence rhyming and wordplay riddles tailored to the Mafia's username
- * Powered by AIHubMix (https://console.aihubmix.com) with resilient local algorithmic fallback
+ * Powered by OpenRouter API (https://openrouter.ai) with resilient local algorithmic fallback
  */
 
-const AIHUBMIX_API_KEY = process.env.AIHUBMIX_API_KEY || process.env.OPENAI_API_KEY || "";
-const AIHUBMIX_BASE_URL = process.env.AIHUBMIX_BASE_URL || "https://aihubmix.com/v1";
-const AI_MODEL = process.env.AI_MODEL || "gpt-4o-mini";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+const AI_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
 
 // Special curated wordplay riddles for common names / words
 const SPECIAL_NAME_RIDDLES = {
@@ -170,8 +170,8 @@ export function generateFallbackRiddles(mafiaName, mafiaAvatar = "👨‍💻", 
  */
 export async function generateAiRiddlesForMafia(mafiaName, mafiaAvatar = "👨‍💻", count = 5) {
   // If no API key configured, use instant fallback
-  if (!AIHUBMIX_API_KEY) {
-    console.log("ℹ️ AIHubMix API key not found in env, using resilient algorithmic riddle generator.");
+  if (!OPENROUTER_API_KEY) {
+    console.log("ℹ️ OpenRouter API key not configured in env, using resilient algorithmic riddle generator.");
     return generateFallbackRiddles(mafiaName, mafiaAvatar, count);
   }
 
@@ -200,13 +200,15 @@ Return ONLY a valid JSON array of objects matching this exact schema:
 ]`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-    const response = await fetch(`${AIHUBMIX_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${AIHUBMIX_API_KEY}`
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://codemafia.app",
+        "X-Title": "Code Mafia II"
       },
       body: JSON.stringify({
         model: AI_MODEL,
@@ -215,7 +217,7 @@ Return ONLY a valid JSON array of objects matching this exact schema:
           { role: "user", content: prompt }
         ],
         temperature: 0.7,
-        max_tokens: 650
+        max_tokens: 750
       }),
       signal: controller.signal
     });
@@ -223,7 +225,7 @@ Return ONLY a valid JSON array of objects matching this exact schema:
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`[AIHubMix] API returned status ${response.status}. Using fallback.`);
+      console.warn(`[OpenRouter Riddle] API returned status ${response.status}. Using fallback.`);
       return generateFallbackRiddles(mafiaName, mafiaAvatar, count);
     }
 
@@ -242,7 +244,7 @@ Return ONLY a valid JSON array of objects matching this exact schema:
     }
     return generateFallbackRiddles(mafiaName, mafiaAvatar, count);
   } catch (err) {
-    console.warn("[AIHubMix] Riddle generation error, using fallback:", err.message);
+    console.warn("[OpenRouter Riddle] Riddle generation error, using fallback:", err.message);
     return generateFallbackRiddles(mafiaName, mafiaAvatar, count);
   }
 }

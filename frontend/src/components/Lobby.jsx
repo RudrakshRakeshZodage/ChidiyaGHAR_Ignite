@@ -47,8 +47,7 @@ export default function Lobby({
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [selectedAiLanguage, setSelectedAiLanguage] = useState("sql");
-  const [customAiKey, setCustomAiKey] = useState(() => localStorage.getItem("codemafia_ai_key") || "");
-  const [customAiProvider, setCustomAiProvider] = useState(() => localStorage.getItem("codemafia_ai_provider") || "gemini");
+  const [customAiKey, setCustomAiKey] = useState(() => localStorage.getItem("codemafia_openrouter_key") || localStorage.getItem("codemafia_ai_key") || "");
   const [showKeySettings, setShowKeySettings] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiSuccessMessage, setAiSuccessMessage] = useState(null);
@@ -63,8 +62,7 @@ export default function Lobby({
     if (!promptToUse.trim()) return;
 
     if (customAiKey.trim()) {
-      localStorage.setItem("codemafia_ai_key", customAiKey.trim());
-      localStorage.setItem("codemafia_ai_provider", customAiProvider);
+      localStorage.setItem("codemafia_openrouter_key", customAiKey.trim());
     }
 
     setIsGeneratingAi(true);
@@ -77,7 +75,7 @@ export default function Lobby({
           prompt: promptToUse.trim(), 
           language: langToUse,
           apiKey: customAiKey.trim() || undefined,
-          provider: customAiProvider
+          provider: "openrouter"
         })
       });
 
@@ -608,35 +606,21 @@ export default function Lobby({
                 onClick={() => setShowKeySettings(!showKeySettings)}
                 className="w-full px-3 py-2 text-left flex items-center justify-between text-[11px] font-mono text-slate-400 hover:text-white"
               >
-                <span>🔑 Custom AI Key (Optional: Gemini / OpenAI / Groq)</span>
+                <span>🔑 Custom OpenRouter API Key (Optional)</span>
                 <span>{showKeySettings ? "▲" : "▼"}</span>
               </button>
 
               {showKeySettings && (
                 <div className="p-3 pt-1 space-y-2 border-t border-[#2d1215]">
-                  <div className="flex space-x-2">
-                    {["gemini", "openai", "groq", "openrouter"].map(p => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setCustomAiProvider(p)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase transition ${
-                          customAiProvider === p ? "bg-[#e31b23] text-white" : "bg-black text-slate-400 border border-[#2d1215]"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
                   <input
                     type="password"
                     value={customAiKey}
                     onChange={(e) => setCustomAiKey(e.target.value)}
-                    placeholder="Paste your API key (e.g. AIza... or sk-...)"
+                    placeholder="OpenRouter Key (sk-or-v1-...)"
                     className="w-full px-3 py-1.5 rounded-lg bg-black border border-[#2d1215] text-white placeholder-slate-600 focus:outline-none focus:border-[#e31b23] text-xs font-mono"
                   />
                   <p className="text-[10px] text-slate-500 font-mono">
-                    Key is saved only in your local browser and used directly for real-time generation.
+                    Paste your OpenRouter key (<a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-[#e31b23] underline">openrouter.ai/keys</a>). Saved in browser localStorage.
                   </p>
                 </div>
               )}

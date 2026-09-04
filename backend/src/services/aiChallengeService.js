@@ -33,63 +33,38 @@ function extractJsonFromLlm(text) {
 }
 
 /**
- * Calls OpenAI-compatible API (OpenAI, Groq, OpenRouter, AIHubMix)
+ * Calls OpenRouter API (https://openrouter.ai/api/v1/chat/completions)
  */
-async function callOpenAiCompatible(apiUrl, apiKey, model, systemPrompt, userPrompt) {
-  const res = await fetch(apiUrl, {
+async function callOpenRouterApi(apiKey, model, systemPrompt, userPrompt) {
+  const modelToUse = model || process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+  
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://codemafia.app",
+      "X-Title": "Code Mafia II"
     },
     body: JSON.stringify({
-      model: model || "gpt-4o-mini",
+      model: modelToUse,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 2500,
+      max_tokens: 3000,
       response_format: { type: "json_object" }
     })
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`API Error ${res.status}: ${errText}`);
+    throw new Error(`OpenRouter API Error ${res.status}: ${errText}`);
   }
 
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content;
-  return extractJsonFromLlm(content);
-}
-
-/**
- * Calls Google Gemini API
- */
-async function callGeminiApi(apiKey, systemPrompt, userPrompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2500,
-        responseMimeType: "application/json"
-      }
-    })
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini Error ${res.status}: ${errText}`);
-  }
-
-  const data = await res.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
   return extractJsonFromLlm(content);
 }
 
@@ -493,50 +468,22 @@ Return ONLY a valid JSON object matching this schema:
   ]
 }`;
 
-  // 1. Try User-supplied API key or Server Environment LLM Keys
-  const geminiKey = (customProvider === "gemini" ? customApiKey : null) || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  const groqKey = (customProvider === "groq" ? customApiKey : null) || process.env.GROQ_API_KEY;
-  const openRouterKey = (customProvider === "openrouter" ? customApiKey : null) || process.env.OPENROUTER_API_KEY;
-  const openAiKey = (customProvider === "openai" ? customApiKey : null) || customApiKey || process.env.OPENAI_API_KEY || process.env.AIHUBMIX_API_KEY;
+  // 1. Read OpenRouter API key (Environment or custom key passed from UI)
+  const openRouterKey = customApiKey || process.env.OPENROUTER_API_KEY;
 
   let parsed = null;
 
-  // Try Gemini
-  if (geminiKey && !parsed) {
+  // Call OpenRouter API
+  if (openRouterKey) {
     try {
-      parsed = await callGeminiApi(geminiKey, systemPrompt, `Create a 2-3 file project in ${normalizedLang} for: "${cleanedPrompt}"`);
-    } catch (e) {
-      console.warn("[Gemini API Attempt]", e.message);
-    }
-  }
-
-  // Try Groq
-  if (groqKey && !parsed) {
-    try {
-      parsed = await callOpenAiCompatible("https://api.groq.com/openai/v1/chat/completions", groqKey, "llama-3.1-8b-instant", systemPrompt, `Create a 2-3 file project in ${normalizedLang} for: "${cleanedPrompt}"`);
-    } catch (e) {
-      console.warn("[Groq API Attempt]", e.message);
-    }
-  }
-
-  // Try OpenRouter
-  if (openRouterKey && !parsed) {
-    try {
-      parsed = await callOpenAiCompatible("https://openrouter.ai/api/v1/chat/completions", openRouterKey, "google/gemini-2.0-flash-lite:free", systemPrompt, `Create a 2-3 file project in ${normalizedLang} for: "${cleanedPrompt}"`);
+      console.log("[AI Challenge] Requesting multi-file generation via OpenRouter API...");
+      const selectedModel = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+      parsed = await callOpenRouterApi(openRouterKey, selectedModel, systemPrompt, `Create a 2-3 file connected project in ${normalizedLang} for: "${cleanedPrompt}"`);
+      if (parsed) {
+        console.log("✅ [OpenRouter API] Successfully received generated multi-file challenge.");
+      }
     } catch (e) {
       console.warn("[OpenRouter API Attempt]", e.message);
-    }
-  }
-
-  // Try OpenAI / AIHubMix
-  if (openAiKey && !parsed) {
-    try {
-      const endpoint = openAiKey.startsWith("sk-") && openAiKey.length > 50 
-        ? "https://api.openai.com/v1/chat/completions" 
-        : "https://aihubmix.com/v1/chat/completions";
-      parsed = await callOpenAiCompatible(endpoint, openAiKey, "gpt-4o-mini", systemPrompt, `Create a 2-3 file project in ${normalizedLang} for: "${cleanedPrompt}"`);
-    } catch (e) {
-      console.warn("[OpenAI/AIHubMix API Attempt]", e.message);
     }
   }
 
