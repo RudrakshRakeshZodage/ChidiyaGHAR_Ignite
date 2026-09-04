@@ -16,6 +16,7 @@ import MysteryCluesDossier from './components/MysteryCluesDossier';
 import MysteryBoxModal from './components/MysteryBoxModal';
 import LeaderboardModal from './components/LeaderboardModal';
 import UserProfileModal from './components/UserProfileModal';
+import MafiaSurveillanceDashboard from './components/MafiaSurveillanceDashboard';
 import ChatBox from './components/ChatBox';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
@@ -27,6 +28,8 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showSurveillanceModal, setShowSurveillanceModal] = useState(false);
+  const [surveillanceFeed, setSurveillanceFeed] = useState([]);
   const [player, setPlayer] = useState(null);
   const [room, setRoom] = useState(null);
   const [code, setCode] = useState("");
@@ -125,9 +128,22 @@ export default function App() {
         if (updatedRoom.mafiaCluesUnlockedCount !== undefined) {
           setMafiaCluesUnlockedCount(updatedRoom.mafiaCluesUnlockedCount);
         }
+        if (updatedRoom.surveillanceFeed) {
+          setSurveillanceFeed(updatedRoom.surveillanceFeed);
+        }
         if (updatedRoom.status === "ROLE_REVEAL") {
           setShowRoleModal(true);
         }
+      });
+
+      socket.on("mafia:screen_update", ({ targetPlayerId, targetPlayerName, code: targetCode }) => {
+        setSurveillanceFeed((prev) => {
+          const exists = prev.some(ws => ws.playerId === targetPlayerId);
+          if (exists) {
+            return prev.map(ws => ws.playerId === targetPlayerId ? { ...ws, code: targetCode, lastUpdated: Date.now() } : ws);
+          }
+          return [...prev, { playerId: targetPlayerId, playerName: targetPlayerName, code: targetCode, lastUpdated: Date.now() }];
+        });
       });
 
       socket.on("code:sync", ({ code: newCode, updatedByName }) => {
@@ -573,6 +589,14 @@ export default function App() {
     }
   };
 
+  // Mafia Sabotage Injection
+  const handleTamperCode = (targetPlayerId, tamperedCode) => {
+    const socket = socketService.getSocket();
+    if (socket && socket.connected) {
+      socket.emit("mafia:tamper_code", { targetPlayerId, tamperedCode });
+    }
+  };
+
   // Reset to Starter
   const handleResetCode = () => {
     if (room?.challenge?.starterCode) {
@@ -713,6 +737,7 @@ export default function App() {
                   phaseTimeRemaining={phaseTimeRemaining}
                   readOnly={!player?.isAlive}
                   activeTypers={activeTypers}
+                  onOpenSurveillance={() => setShowSurveillanceModal(true)}
                 />
               </div>
 
@@ -863,6 +888,16 @@ export default function App() {
         onClose={() => setShowProfileModal(false)}
         player={player}
         authUser={authUser}
+      />
+
+      {/* Secret Mafia CCTV Surveillance Multi-Screen Dashboard */}
+      <MafiaSurveillanceDashboard
+        isOpen={showSurveillanceModal}
+        onClose={() => setShowSurveillanceModal(false)}
+        surveillanceFeed={surveillanceFeed}
+        room={room}
+        player={player}
+        onTamperCode={handleTamperCode}
       />
 
       {/* Secret Role Reveal Modal */}

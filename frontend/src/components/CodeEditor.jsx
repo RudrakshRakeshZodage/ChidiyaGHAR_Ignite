@@ -12,7 +12,8 @@ export default function CodeEditor({
   phase = "CODING",
   phaseTimeRemaining = 30,
   readOnly = false,
-  activeTypers = []
+  activeTypers = [],
+  onOpenSurveillance
 }) {
   const textareaRef = useRef(null);
   const [copied, setCopied] = useState(false);
@@ -20,7 +21,9 @@ export default function CodeEditor({
 
   const isMafia = player?.role === "MAFIA";
   const isFrozen = phase === "FREEZE";
-  const effectiveReadOnly = readOnly || isFrozen;
+  // Mafia is read-only during the 30s Developer Coding phase (surveillance only)
+  const isMafiaLocked = isMafia && !isFrozen;
+  const effectiveReadOnly = readOnly || (isFrozen && !isMafia) || isMafiaLocked;
 
   const currentLines = (code || "").split('\n');
   const beforeLines = (snapshotBeforeCode || code || "").split('\n');
@@ -77,19 +80,47 @@ export default function CodeEditor({
         <SaboteurGlitchOverlay phaseTimeRemaining={phaseTimeRemaining} />
       )}
 
+      {/* Mafia Surveillance Lockout Banner during Coding Phase */}
+      {isMafia && !isFrozen && (
+        <div className="px-4 py-2 bg-gradient-to-r from-amber-950 via-slate-900 to-amber-950 border-b border-amber-800/80 flex items-center justify-between text-xs text-amber-200">
+          <div className="flex items-center space-x-2">
+            <Eye className="h-4 w-4 text-amber-400 animate-pulse" />
+            <span className="font-extrabold uppercase tracking-wide">
+              🔒 SURVEILLANCE ONLY (Developers Coding - {phaseTimeRemaining}s left)
+            </span>
+          </div>
+          {onOpenSurveillance && (
+            <button
+              type="button"
+              onClick={onOpenSurveillance}
+              className="px-2.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-mono text-[11px] font-bold transition flex items-center space-x-1 shadow-md"
+            >
+              <span>OPEN CCTV FEEDS</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Freeze Phase Alert Banner */}
       {isFrozen && (
         <div className="px-4 py-2 bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 border-b border-cyan-800/80 flex items-center justify-between text-xs text-cyan-200">
           <div className="flex items-center space-x-2">
             <Snowflake className="h-4 w-4 text-cyan-400 animate-spin" />
             <span className="font-extrabold uppercase tracking-wide">
-              ❄️ 15s CODE FREEZE & AUDIT PHASE
+              {isMafia ? "😈 15s SABOTAGE WINDOW ACTIVE" : "❄️ 15s CODE FREEZE & AUDIT PHASE"}
             </span>
             <span className="text-cyan-400 font-mono font-bold">({phaseTimeRemaining}s left)</span>
           </div>
-          <span className="text-[10px] text-cyan-300 hidden sm:inline font-mono">
-            {isMafia ? "🕵️ Review Before & After Sabotage" : "🔒 Code editing paused. Run unit tests!"}
-          </span>
+          {isMafia && onOpenSurveillance && (
+            <button
+              type="button"
+              onClick={onOpenSurveillance}
+              className="px-2.5 py-0.5 rounded bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-500 text-white font-mono text-[11px] font-extrabold transition flex items-center space-x-1 shadow-md shadow-rose-900/40 animate-bounce"
+            >
+              <Bug className="h-3 w-3" />
+              <span>INJECT SABOTAGE NOW</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -103,7 +134,7 @@ export default function CodeEditor({
           </div>
           <span className="text-xs font-mono font-semibold text-slate-300 flex items-center space-x-1.5">
             <Code className="h-3.5 w-3.5 text-sky-400" />
-            <span>main.js</span>
+            <span>workspace.js</span>
           </span>
 
           {/* Role-Specific Workspace Banner */}
@@ -114,13 +145,26 @@ export default function CodeEditor({
                 : 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/80'
             }`}>
               {isMafia ? <Bug className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-              <span>{isMafia ? "MAFIA WORKSPACE" : "DEV WORKSPACE"}</span>
+              <span>{isMafia ? "MAFIA COVERT WORKSPACE" : "PRIVATE DEV WORKSPACE"}</span>
             </span>
           )}
         </div>
 
         {/* Toolbar buttons & Live Typers */}
         <div className="flex items-center space-x-2">
+          {/* Mafia CCTV Surveillance Modal Trigger */}
+          {isMafia && onOpenSurveillance && (
+            <button
+              type="button"
+              onClick={onOpenSurveillance}
+              className="px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold flex items-center space-x-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-600 text-rose-300 transition shadow-md shadow-rose-950/30"
+              title="Open multi-feed CCTV screen monitoring all team members"
+            >
+              <Eye className="h-3.5 w-3.5 text-rose-400 animate-pulse" />
+              <span>CCTV FEEDS</span>
+            </button>
+          )}
+
           {/* Mafia Toggle: Before/After Diff Inspector */}
           {isMafia && (
             <button
@@ -134,7 +178,7 @@ export default function CodeEditor({
               title="Compare original baseline code vs current code"
             >
               <Columns className="h-3.5 w-3.5" />
-              <span>{showDiffView ? "Live Editor" : "Before vs After"}</span>
+              <span>{showDiffView ? "Live Editor" : "Diff View"}</span>
             </button>
           )}
 

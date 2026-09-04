@@ -230,21 +230,54 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 6. Collaborative Code Update (Instant Sync across all players)
+  // 6. Individual Code Update (Streams to Mafia CCTV Surveillance)
   socket.on("code:change", ({ code }) => {
     if (!currentRoomCode || !currentPlayerId) return;
     const room = roomManager.updateCode(currentRoomCode, currentPlayerId, code);
-    if (room) {
-      const sender = room.players.get(currentPlayerId);
-      socket.to(currentRoomCode).emit("code:sync", {
-        code: room.currentCode,
-        updatedBy: currentPlayerId,
-        updatedByName: sender?.name || "Team Member"
-      });
+    if (!room || room.error) return;
+
+    const sender = room.players.get(currentPlayerId);
+    
+    // Stream live screen updates to all Mafia operatives in the room
+    for (const p of room.players.values()) {
+      if (p.role === "MAFIA" && p.socketId && p.id !== currentPlayerId) {
+        io.to(p.socketId).emit("mafia:screen_update", {
+          targetPlayerId: currentPlayerId,
+          targetPlayerName: sender?.name || "Developer",
+          code,
+          timestamp: Date.now()
+        });
+      }
     }
   });
 
-  // 6b. Live Typing Presence
+  // 6b. Mafia Sabotage Code Injection (During Freeze Window)
+  socket.on("mafia:tamper_code", ({ targetPlayerId, tamperedCode }, callback) => {
+    if (!currentRoomCode || !currentPlayerId || !targetPlayerId) return;
+    const result = roomManager.tamperPlayerCode(currentRoomCode, currentPlayerId, targetPlayerId, tamperedCode);
+    if (result.error) {
+      callback?.({ success: false, error: result.error });
+      return;
+    }
+
+    const room = roomManager.getRoom(currentRoomCode);
+    const targetPlayer = room?.players.get(targetPlayerId);
+
+    // Sync tampered code directly to the target developer's editor
+    if (targetPlayer?.socketId) {
+      io.to(targetPlayer.socketId).emit("code:sync", {
+        code: tamperedCode,
+        updatedBy: "SYSTEM_SYNC",
+        updatedByName: "Sync Engine"
+      });
+    }
+
+    // Broadcast updated state
+    broadcastRoomState(room);
+    callback?.({ success: true });
+  });
+
+  // 6c. Live Typing Presence
   socket.on("code:typing", () => {
     if (!currentRoomCode || !currentPlayerId) return;
     const room = roomManager.getRoom(currentRoomCode);

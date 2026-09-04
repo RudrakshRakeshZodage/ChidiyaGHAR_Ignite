@@ -174,6 +174,21 @@ export class RoomManager {
       room.players.set(p.id, p);
     });
 
+    // Initialize individual workspaces per player
+    room.playerWorkspaces = new Map();
+    assigned.forEach(p => {
+      room.playerWorkspaces.set(p.id, {
+        playerId: p.id,
+        playerName: p.name,
+        playerAvatar: p.avatar,
+        role: p.role,
+        isAlive: p.isAlive,
+        code: challenge.starterCode,
+        testResults: null,
+        lastUpdated: Date.now()
+      });
+    });
+
     room.status = GAME_STATES.ROLE_REVEAL;
     room.timeRemainingSeconds = room.settings.durationMinutes * 60;
     room.phase = "CODING";
@@ -206,9 +221,28 @@ export class RoomManager {
   updateCode(roomCode, playerId, newCode) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
-    if (room.phase === "FREEZE") return null; // Prevent code edits during 15s freeze
     const player = room.players.get(playerId);
 
+    // Rule: During 30s CODING phase, Mafia is locked out from editing (Surveillance only)
+    if (player?.role === "MAFIA" && room.phase === "CODING") {
+      return { error: "Mafia cannot edit code during the 30-second Developer Coding phase. Surveillance mode active." };
+    }
+
+    // Update individual workspace
+    if (!room.playerWorkspaces) room.playerWorkspaces = new Map();
+    const ws = room.playerWorkspaces.get(playerId) || {
+      playerId,
+      playerName: player?.name || "Player",
+      playerAvatar: player?.avatar || "👨‍💻",
+      role: player?.role || "DEVELOPER",
+      isAlive: player?.isAlive ?? true,
+      code: newCode,
+      testResults: null
+    };
+
+    ws.code = newCode;
+    ws.lastUpdated = Date.now();
+    room.playerWorkspaces.set(playerId, ws);
     room.currentCode = newCode;
 
     // Throttle activity log entry for code editing (at most once every 3.5s per player)
@@ -222,7 +256,7 @@ export class RoomManager {
         type: "CODE_EDIT",
         playerId: player ? player.id : null,
         playerName: player ? player.name : "Anonymous",
-        text: `${player ? player.name : "A player"} modified the codebase`,
+        text: `${player ? player.name : "A player"} modified their workspace`,
         timestamp: now
       });
     }
@@ -230,13 +264,41 @@ export class RoomManager {
     return room;
   }
 
+  tamperPlayerCode(roomCode, mafiaId, targetPlayerId, tamperedCode) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+    const mafia = room.players.get(mafiaId);
+    if (mafia?.role !== "MAFIA") return { error: "Only Mafia can tamper with code" };
+
+    if (!room.playerWorkspaces) room.playerWorkspaces = new Map();
+    const targetWs = room.playerWorkspaces.get(targetPlayerId);
+    if (!targetWs) return { error: "Target workspace not found" };
+
+    targetWs.code = tamperedCode;
+    targetWs.lastUpdated = Date.now();
+    room.playerWorkspaces.set(targetPlayerId, targetWs);
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "CODE_SABOTAGE",
+      text: `⚠️ Silent codebase anomaly detected in ${targetWs.playerName}'s workspace!`,
+      timestamp: Date.now()
+    });
+
+    return { success: true, targetPlayerId, code: tamperedCode };
+  }
+
   runTests(roomCode, playerId) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
     const player = room.players.get(playerId);
 
-    const testResults = runChallengeTests(room.currentCode, room.challenge.testSuite);
+    const playerCode = room.playerWorkspaces?.get(playerId)?.code || room.currentCode;
+    const testResults = runChallengeTests(playerCode, room.challenge.testSuite);
     room.testResults = testResults;
+    if (room.playerWorkspaces?.has(playerId)) {
+      room.playerWorkspaces.get(playerId).testResults = testResults;
+    }
 
     // Track newly unlocked Mystery Box clues for passed test cases
     const newlyUnlockedClues = [];
@@ -298,38 +360,43 @@ export class RoomManager {
       callerId,
       callerName: caller.name,
       startedAt: Date.now(),
-      durationSeconds: room.settings.votingDurationSeconds,
-      votes: {} // targetId -> count
+      timeLeftSeconds: room.settings.votingDurationSeconds || 45
     };
 
     room.activityLog.push({
       id: uuidv4(),
       type: "MEETING_CALLED",
-      text: `🚨 EMERGENCY MEETING called by ${caller.name}!`,
+      playerName: caller.name,
+      text: `🚨 EMERGENCY DEBUG MEETING called by ${caller.name}!`,
       timestamp: Date.now()
     });
 
-    return { room };
+    return { room, meeting: room.meeting };
   }
 
-  castVote(roomCode, voterId, targetId) {
+  castVote(roomCode, voterId, targetPlayerId) {
     const room = this.getRoom(roomCode);
-    if (!room || room.status !== GAME_STATES.VOTING) return null;
+    if (!room || room.status !== GAME_STATES.VOTING) return { error: "No active voting session" };
 
     const voter = room.players.get(voterId);
-    if (!voter || !voter.isAlive || voter.hasVoted) return null;
+    if (!voter || !voter.isAlive) return { error: "Dead players cannot vote" };
+    if (voter.hasVoted) return { error: "Already cast your vote" };
 
     voter.hasVoted = true;
-    voter.voteTarget = targetId; // targetId can be 'SKIP' or playerId
+    voter.voteTarget = targetPlayerId; // null = skip vote
+
+    const target = targetPlayerId ? room.players.get(targetPlayerId) : null;
+    const targetName = target ? target.name : "SKIP";
 
     room.activityLog.push({
       id: uuidv4(),
       type: "VOTE_CAST",
-      text: `${voter.name} cast their vote`,
+      playerName: voter.name,
+      text: `${voter.name} submitted their vote [Target: ${targetName}]`,
       timestamp: Date.now()
     });
 
-    // Check if all alive players voted
+    // Check if all alive players have voted
     const alivePlayers = Array.from(room.players.values()).filter(p => p.isAlive);
     const allVoted = alivePlayers.every(p => p.hasVoted);
 
@@ -338,34 +405,34 @@ export class RoomManager {
 
   resolveVoting(roomCode) {
     const room = this.getRoom(roomCode);
-    if (!room || room.status !== GAME_STATES.VOTING) return null;
+    if (!room) return null;
 
-    const votes = new Map(); // targetId -> count
-    const alivePlayers = Array.from(room.players.values()).filter(p => p.isAlive);
-
-    for (const p of alivePlayers) {
-      const target = p.voteTarget || "SKIP";
-      votes.set(target, (votes.get(target) || 0) + 1);
+    // Tally votes
+    const votes = new Map(); // targetId (or "SKIP") -> count
+    for (const p of room.players.values()) {
+      if (p.isAlive && p.voteTarget !== undefined) {
+        const target = p.voteTarget || "SKIP";
+        votes.set(target, (votes.get(target) || 0) + 1);
+      }
     }
 
-    // Determine highest vote
-    let highestVote = 0;
-    let ejectedTarget = null;
+    let maxVotes = 0;
+    let ejectedTargetId = null;
     let isTie = false;
 
     for (const [target, count] of votes.entries()) {
-      if (count > highestVote) {
-        highestVote = count;
-        ejectedTarget = target;
+      if (count > maxVotes) {
+        maxVotes = count;
+        ejectedTargetId = target;
         isTie = false;
-      } else if (count === highestVote) {
+      } else if (count === maxVotes) {
         isTie = true;
       }
     }
 
     let ejectedPlayer = null;
-    if (!isTie && ejectedTarget && ejectedTarget !== "SKIP") {
-      ejectedPlayer = room.players.get(ejectedTarget);
+    if (!isTie && ejectedTargetId && ejectedTargetId !== "SKIP") {
+      ejectedPlayer = room.players.get(ejectedTargetId);
       if (ejectedPlayer) {
         ejectedPlayer.isAlive = false;
       }
@@ -373,10 +440,10 @@ export class RoomManager {
 
     room.activityLog.push({
       id: uuidv4(),
-      type: "VOTE_RESOLVED",
+      type: "MEETING_RESOLVED",
       text: ejectedPlayer
-        ? `${ejectedPlayer.name} was ejected! (Role: ${ejectedPlayer.role})`
-        : "No one was ejected (Tie or Skipped).",
+        ? `⚖️ Voting concluded: ${ejectedPlayer.name} was ejected! (Role: ${ejectedPlayer.role})`
+        : "⚖️ Voting concluded: No player was ejected (Tie or Skip majority)",
       timestamp: Date.now()
     });
 
@@ -443,6 +510,22 @@ export class RoomManager {
       };
     }
 
+    // Prepare Mafia surveillance feed
+    const surveillanceFeed = (selfPlayer?.role === "MAFIA" || isGameOver)
+      ? Array.from(room.playerWorkspaces?.values() || [])
+          .filter(ws => ws.playerId !== playerId)
+          .map(ws => ({
+            playerId: ws.playerId,
+            playerName: ws.playerName,
+            playerAvatar: ws.playerAvatar,
+            role: isGameOver ? ws.role : "DEVELOPER",
+            code: ws.code,
+            testResults: ws.testResults,
+            isAlive: ws.isAlive,
+            lastUpdated: ws.lastUpdated
+          }))
+      : [];
+
     return {
       code: room.code,
       status: room.status,
@@ -459,11 +542,11 @@ export class RoomManager {
         mafiaGoal: room.challenge.mafiaGoal,
         testSuite: room.challenge.testSuite.map(t => ({ id: t.id, name: t.name }))
       },
-      currentCode: room.currentCode,
+      currentCode: room.playerWorkspaces?.get(playerId)?.code || room.currentCode,
       players: playersObj,
       activityLog: room.activityLog.slice(-50),
       chatMessages: (room.chatMessages || []).slice(-100),
-      testResults: room.testResults,
+      testResults: room.playerWorkspaces?.get(playerId)?.testResults || room.testResults,
       meeting: room.meeting,
       winner: room.winner,
       winReason: room.winReason,
@@ -471,6 +554,7 @@ export class RoomManager {
       phase: room.phase || "CODING",
       phaseTimeRemaining: room.phaseTimeRemaining || 30,
       snapshotBeforeCode: (selfPlayer?.role === "MAFIA" || isGameOver) ? (room.snapshotBeforeCode || room.challenge?.starterCode) : null,
+      surveillanceFeed,
       unlockedMysteryClues: (selfPlayer?.role === "DEVELOPER" || isGameOver)
         ? (room.mysteryRiddles || []).filter((_, idx) => (room.unlockedClueIndices || []).includes(idx))
         : [],
