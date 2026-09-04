@@ -17,6 +17,7 @@ import MysteryBoxModal from './components/MysteryBoxModal';
 import LeaderboardModal from './components/LeaderboardModal';
 import UserProfileModal from './components/UserProfileModal';
 import MafiaSurveillanceDashboard from './components/MafiaSurveillanceDashboard';
+import SuspectsRosterBoard from './components/SuspectsRosterBoard';
 import ChatBox from './components/ChatBox';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
@@ -30,6 +31,7 @@ export default function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSurveillanceModal, setShowSurveillanceModal] = useState(false);
   const [surveillanceFeed, setSurveillanceFeed] = useState([]);
+  const [selectedSuspectId, setSelectedSuspectId] = useState(null);
   const [player, setPlayer] = useState(null);
   const [room, setRoom] = useState(null);
   const [code, setCode] = useState("");
@@ -721,6 +723,20 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Crime Board Suspects Polaroid Roster with EKG Heartbeat */}
+            <SuspectsRosterBoard
+              room={room}
+              player={player}
+              surveillanceFeed={surveillanceFeed}
+              selectedSuspectId={selectedSuspectId}
+              onSelectSuspect={(suspect) => {
+                setSelectedSuspectId(suspect.id);
+                if (player?.role === "MAFIA" && suspect.id !== player.id) {
+                  setShowSurveillanceModal(true);
+                }
+              }}
+            />
 
             {/* Split Arena Grid */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[560px]">
