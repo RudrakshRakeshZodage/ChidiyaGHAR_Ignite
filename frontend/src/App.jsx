@@ -43,7 +43,7 @@ export default function App() {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState(600);
   const [phase, setPhase] = useState("CODING");
-  const [phaseTimeRemaining, setPhaseTimeRemaining] = useState(30);
+  const [phaseTimeRemaining, setPhaseTimeRemaining] = useState(45);
   const [snapshotBeforeCode, setSnapshotBeforeCode] = useState("");
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -391,7 +391,7 @@ export default function App() {
         activityLog: [{ id: "1", type: "ROOM_CREATED", text: `Room created by ${name}`, timestamp: Date.now() }],
         chatMessages: [],
         phase: "CODING",
-        phaseTimeRemaining: 30,
+        phaseTimeRemaining: 45,
         snapshotBeforeCode: challenge.starterCode,
         timeRemainingSeconds: settings.durationMinutes * 60
       };
@@ -477,12 +477,12 @@ export default function App() {
       setPlayer(updatedPlayer);
       setSnapshotBeforeCode(room.challenge.starterCode);
       setPhase("CODING");
-      setPhaseTimeRemaining(30);
+      setPhaseTimeRemaining(45);
       setRoom(prev => ({
         ...prev,
         status: "ROLE_REVEAL",
         phase: "CODING",
-        phaseTimeRemaining: 30,
+        phaseTimeRemaining: 45,
         snapshotBeforeCode: room.challenge.starterCode,
         players: { [player.id]: updatedPlayer }
       }));

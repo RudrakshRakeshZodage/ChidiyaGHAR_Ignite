@@ -76,7 +76,7 @@ export default function Navbar({
                 : "bg-emerald-950/80 border-emerald-600 text-emerald-300"
             }`}>
               <span>{room.phase === "FREEZE" ? "❄️ SABOTAGE WINDOW:" : "⚡ SPRINT:"}</span>
-              <span className="tabular-nums font-black">{room.phaseTimeRemaining ?? 30}s</span>
+              <span className="tabular-nums font-black">{room.phaseTimeRemaining ?? 45}s</span>
             </div>
           )}
 

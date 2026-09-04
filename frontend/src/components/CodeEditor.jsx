@@ -18,7 +18,7 @@ export default function CodeEditor({
   onTyping,
   player,
   phase = "CODING",
-  phaseTimeRemaining = 30,
+  phaseTimeRemaining = 45,
   readOnly = false,
   activeTypers = [],
   onOpenSurveillance,
@@ -274,8 +274,8 @@ export default function CodeEditor({
 
         {/* Language Badge, AI Hint & View Switcher */}
         <div className="flex items-center space-x-2 shrink-0">
-          {/* 1x AI Tactical Hint Trigger */}
-          {onOpenAiHint && (
+          {/* 1x AI Tactical Hint Trigger (Exclusively for Developers) */}
+          {onOpenAiHint && !isMafia && (
             <button
               type="button"
               onClick={onOpenAiHint}

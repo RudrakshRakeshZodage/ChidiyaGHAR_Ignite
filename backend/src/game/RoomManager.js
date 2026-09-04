@@ -69,7 +69,7 @@ export class RoomManager {
       timer: null,
       timeRemainingSeconds: 600,
       phase: "CODING",
-      phaseTimeRemaining: 30,
+      phaseTimeRemaining: 45,
       snapshotBeforeCode: defaultChallenge.starterCode,
       mysteryRiddles: [],
       unlockedClueIndices: [],
@@ -226,7 +226,7 @@ export class RoomManager {
     room.status = GAME_STATES.ROLE_REVEAL;
     room.timeRemainingSeconds = (room.settings.durationMinutes || 10) * 60;
     room.phase = "CODING";
-    room.phaseTimeRemaining = 30;
+    room.phaseTimeRemaining = 45;
     room.snapshotBeforeCode = challenge.starterCode;
     room.unlockedClueIndices = [];
     room.playersWithForfeitedMystery = [];
@@ -414,6 +414,11 @@ export class RoomManager {
 
     const player = room.players.get(playerId);
     if (!player) return { error: "Player not found" };
+
+    // AI Tactical Hints are strictly for Developers only
+    if (player.role === "MAFIA") {
+      return { error: "AI Tactical Hints are exclusively available to Developers." };
+    }
 
     if (!room.playersWithForfeitedMystery) {
       room.playersWithForfeitedMystery = [];
@@ -663,7 +668,7 @@ export class RoomManager {
       winReason: room.winReason,
       timeRemainingSeconds: room.timeRemainingSeconds,
       phase: room.phase || "CODING",
-      phaseTimeRemaining: room.phaseTimeRemaining || 30,
+      phaseTimeRemaining: room.phaseTimeRemaining || 45,
       snapshotBeforeCode: (selfPlayer?.role === "MAFIA" || isGameOver) ? (room.snapshotBeforeCode || room.challenge?.starterCode) : null,
       surveillanceFeed,
       hasUsedAiHint: !!(selfPlayer?.usedAiHint || ws?.usedAiHint || room.playersWithForfeitedMystery?.includes(playerId)),

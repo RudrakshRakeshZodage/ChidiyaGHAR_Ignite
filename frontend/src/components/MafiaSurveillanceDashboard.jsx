@@ -36,7 +36,7 @@ export default function MafiaSurveillanceDashboard({
   if (!isOpen || player?.role !== "MAFIA") return null;
 
   const isCodingPhase = room?.phase === "CODING";
-  const phaseTimeRemaining = room?.phaseTimeRemaining || 30;
+  const phaseTimeRemaining = room?.phaseTimeRemaining || 45;
 
   // Active targeted workspace
   const activeWorkspace = surveillanceFeed.find(ws => ws.playerId === selectedTargetId) || surveillanceFeed[0];

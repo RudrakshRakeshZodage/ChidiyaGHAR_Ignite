@@ -66,14 +66,14 @@ function startGameTicker(roomCode) {
     if (room.status === GAME_STATES.PLAYING) {
       room.timeRemainingSeconds -= 1;
 
-      // 30s Active Coding / 15s Code Freeze Cycle
+      // 45s Active Coding / 15s Code Freeze Cycle
       if (!room.phase) room.phase = "CODING";
-      if (room.phaseTimeRemaining === undefined) room.phaseTimeRemaining = 30;
+      if (room.phaseTimeRemaining === undefined) room.phaseTimeRemaining = 45;
 
       room.phaseTimeRemaining -= 1;
 
       if (room.phase === "CODING" && room.phaseTimeRemaining <= 0) {
-        // Transition to 15s Code Freeze
+        // Transition to 15s Code Freeze / Mafia Sabotage Window
         room.phase = "FREEZE";
         room.phaseTimeRemaining = 15;
         room.activityLog.push({
@@ -90,19 +90,19 @@ function startGameTicker(roomCode) {
         });
         broadcastRoomState(room);
       } else if (room.phase === "FREEZE" && room.phaseTimeRemaining <= 0) {
-        // Transition to 30s Active Coding Sprint
+        // Transition to 45s Active Coding Sprint
         room.phase = "CODING";
-        room.phaseTimeRemaining = 30;
+        room.phaseTimeRemaining = 45;
         room.snapshotBeforeCode = room.currentCode; // Set new baseline snapshot for the upcoming cycle
         room.activityLog.push({
           id: uuidv4(),
           type: "PHASE_CHANGE",
-          text: "⚡ ACTIVE CODING SPRINT (30s): Code editing unlocked for all developers & mafia!",
+          text: "⚡ ACTIVE CODING SPRINT (45s): Code editing unlocked for all developers & mafia!",
           timestamp: Date.now()
         });
         io.to(roomCode).emit("game:phase_change", {
           phase: "CODING",
-          phaseTimeRemaining: 30,
+          phaseTimeRemaining: 45,
           currentCode: room.currentCode,
           snapshotBeforeCode: room.snapshotBeforeCode
         });

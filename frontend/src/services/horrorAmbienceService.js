@@ -13,8 +13,11 @@ class HorrorAmbienceService {
     this.masterGain = null;
     this.isPlaying = false;
     this.isMuted = localStorage.getItem("codemafia_ambient_muted") === "true";
-    this.volume = parseFloat(localStorage.getItem("codemafia_ambient_volume") || "0.35");
+    this.volume = parseFloat(localStorage.getItem("codemafia_ambient_volume") || "0.40");
     
+    // Main Song Audio Element
+    this.bgmAudio = null;
+
     // Nodes
     this.nodes = [];
     this.whisperInterval = null;
@@ -35,6 +38,30 @@ class HorrorAmbienceService {
   }
 
   /**
+   * Main Video Soundtrack (videoplayback / horror_theme.weba)
+   */
+  startMainSoundtrack() {
+    try {
+      if (!this.bgmAudio) {
+        this.bgmAudio = new Audio("/horror_theme.weba");
+        this.bgmAudio.loop = true;
+        this.bgmAudio.preload = "auto";
+      }
+
+      this.bgmAudio.volume = this.isMuted ? 0 : Math.min(1.0, this.volume * 0.85);
+      
+      const playPromise = this.bgmAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn("[Horror Ambience] Audio play waiting for user gesture:", err.message);
+        });
+      }
+    } catch (e) {
+      console.warn("[Horror Ambience] Could not initialize soundtrack:", e);
+    }
+  }
+
+  /**
    * Start the continuous atmospheric horror soundscape
    */
   async start() {
@@ -48,6 +75,9 @@ class HorrorAmbienceService {
         console.warn("AudioContext resume waiting for user gesture:", e.message);
       }
     }
+
+    // Always ensure main song plays on start
+    this.startMainSoundtrack();
 
     if (this.isPlaying) return;
     this.isPlaying = true;
@@ -338,6 +368,13 @@ class HorrorAmbienceService {
       this.masterGain.gain.setTargetAtTime(targetGain, this.audioCtx.currentTime, 0.2);
     }
 
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = this.isMuted ? 0 : Math.min(1.0, this.volume * 0.85);
+      if (!this.isMuted && this.bgmAudio.paused) {
+        this.bgmAudio.play().catch(() => {});
+      }
+    }
+
     if (!this.isPlaying && !this.isMuted) {
       this.start();
     }
@@ -357,6 +394,10 @@ class HorrorAmbienceService {
       this.masterGain.gain.setTargetAtTime(this.volume, this.audioCtx.currentTime, 0.1);
     }
 
+    if (this.bgmAudio && !this.isMuted) {
+      this.bgmAudio.volume = Math.min(1.0, this.volume * 0.85);
+    }
+
     this.notifyListeners();
   }
 
@@ -370,6 +411,11 @@ class HorrorAmbienceService {
     this.whisperInterval = null;
     this.heartbeatInterval = null;
     this.spokenWhisperInterval = null;
+
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+      this.bgmAudio.currentTime = 0;
+    }
 
     this.nodes.forEach(node => {
       try {

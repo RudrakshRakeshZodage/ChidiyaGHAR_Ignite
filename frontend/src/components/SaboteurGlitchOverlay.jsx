@@ -2,8 +2,8 @@ import React from 'react';
 import { AlertTriangle, ShieldAlert, Terminal, Zap, Bug, EyeOff } from 'lucide-react';
 
 export default function SaboteurGlitchOverlay({ phaseTimeRemaining = 15 }) {
-  // Show only during the first 10 seconds of the 15-second freeze (i.e. when remaining > 5)
-  const glitchTimeLeft = Math.max(0, phaseTimeRemaining - 5);
+  // Active for the full 15-second Mafia Freeze & Tamper phase
+  const glitchTimeLeft = Math.max(0, phaseTimeRemaining);
   if (glitchTimeLeft <= 0) return null;
 
   return (
@@ -25,7 +25,7 @@ export default function SaboteurGlitchOverlay({ phaseTimeRemaining = 15 }) {
         <div className="space-y-1">
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-rose-950 border border-rose-700 text-rose-300 font-mono text-[10px] font-black uppercase tracking-widest">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-            <span>SABOTEUR TAMPERING IN PROGRESS</span>
+            <span>SABOTEUR TAMPERING IN PROGRESS (15s)</span>
           </div>
 
           <h3 className="text-base sm:text-lg font-black font-display text-white tracking-wide">
@@ -36,7 +36,7 @@ export default function SaboteurGlitchOverlay({ phaseTimeRemaining = 15 }) {
           </p>
         </div>
 
-        {/* 10s Glitch Countdown Bar */}
+        {/* 15s Glitch Countdown Bar */}
         <div className="space-y-1 pt-1">
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
             <span>Interference Jamming</span>
@@ -45,7 +45,7 @@ export default function SaboteurGlitchOverlay({ phaseTimeRemaining = 15 }) {
           <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-rose-900/60">
             <div
               className="h-full bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 transition-all duration-1000"
-              style={{ width: `${(glitchTimeLeft / 10) * 100}%` }}
+              style={{ width: `${(glitchTimeLeft / 15) * 100}%` }}
             />
           </div>
         </div>
