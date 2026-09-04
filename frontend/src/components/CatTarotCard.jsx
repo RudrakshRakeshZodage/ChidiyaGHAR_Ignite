@@ -2,26 +2,13 @@ import React from 'react';
 
 /**
  * 12 Illustrated Cat Mafia & Detective Character Archetypes
- * Faithfully recreating the vintage playing card deck:
- * 1. ЛІКАР / ДОКТОР (Doctor)
- * 2. КІЛЕР / КИЛЛЕР (Hitman)
- * 3. КУРТИЗАНКА / КУРТИЗАНКА (Courtesan)
- * 4. МАНІЯК / МАНЬЯК (Maniac)
- * 5. МАФІЯ / МАФИЯ (Mafia Godmother)
- * 6. ПСИХІАТР / ПСИХИАТР (Psychiatrist)
- * 7. СУДДЯ / СУДЬЯ (Judge)
- * 8. МИРНА МЕШКАНКА / МИРНАЯ ЖИТЕЛЬНИЦА (Investigator)
- * 9. МИРНИЙ МЕШКАНЕЦЬ / МИРНЫЙ ЖИТЕЛЬ (Tweed Gent)
- * 10. МИРНИЙ МЕШКАНЕЦЬ / МИРНЫЙ ЖИТЕЛЬ (Pipe Sleuth)
- * 11. МИРНИЙ МЕШКАНЕЦЬ / МИРНЫЙ ЖИТЕЛЬ (Ginger Rascal)
- * 12. МИРНИЙ МЕШКАНЕЦЬ / МИРНЫЙ ЖИТЕЛЬ (Jazz Trumpeter)
+ * (English titles & labels matching the vintage cat tarot aesthetic)
  */
 export const CAT_TAROT_ARCHETYPES = [
   {
     id: "doctor",
-    topTitle: "ЛІКАР",
-    bottomTitle: "ДОКТОР",
-    enTitle: "DOCTOR",
+    title: "DOCTOR",
+    tagline: "DR. DEBUGGER",
     roleType: "DEVELOPER",
     desc: "Healer & Debugger",
     coat: "labcoat",
@@ -34,9 +21,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "killer",
-    topTitle: "КІЛЕР",
-    bottomTitle: "КИЛЛЕР",
-    enTitle: "HITMAN",
+    title: "HITMAN",
+    tagline: "STEALTH SABOTEUR",
     roleType: "MAFIA",
     desc: "Stealth Assassin",
     coat: "suit",
@@ -49,9 +35,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "courtesan",
-    topTitle: "КУРТИЗАНКА",
-    bottomTitle: "КУРТИЗАНКА",
-    enTitle: "COURTESAN",
+    title: "COURTESAN",
+    tagline: "FEMME FATALE",
     roleType: "MAFIA",
     desc: "Femme Fatale",
     coat: "flapper_gown",
@@ -65,9 +50,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "maniac",
-    topTitle: "МАНІЯК",
-    bottomTitle: "МАНЬЯК",
-    enTitle: "MANIAC",
+    title: "MANIAC",
+    tagline: "CHAOS GLITCHER",
     roleType: "MAFIA",
     desc: "Chaos Glitcher",
     coat: "striped_suit",
@@ -80,9 +64,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "mafia_don",
-    topTitle: "МАФІЯ",
-    bottomTitle: "МАФИЯ",
-    enTitle: "THE GODMOTHER",
+    title: "MAFIA DON",
+    tagline: "THE GODMOTHER",
     roleType: "MAFIA",
     desc: "Syndicate Leader",
     coat: "red_gown",
@@ -95,9 +78,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "psychiatrist",
-    topTitle: "ПСИХІАТР",
-    bottomTitle: "ПСИХИАТР",
-    enTitle: "PSYCHIATRIST",
+    title: "PSYCHIATRIST",
+    tagline: "MIND ANALYST",
     roleType: "DEVELOPER",
     desc: "Mind Analyst",
     coat: "labcoat_blue",
@@ -110,9 +92,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "judge",
-    topTitle: "СУДДЯ",
-    bottomTitle: "СУДЬЯ",
-    enTitle: "JUDGE",
+    title: "JUDGE",
+    tagline: "CHIEF JUSTICE",
     roleType: "DEVELOPER",
     desc: "Chief Justice",
     coat: "judge_robe",
@@ -125,9 +106,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "investigator",
-    topTitle: "МИРНА МЕШКАНКА",
-    bottomTitle: "МИРНАЯ ЖИТЕЛЬНИЦА",
-    enTitle: "INVESTIGATOR",
+    title: "INVESTIGATOR",
+    tagline: "LEAD SLEUTH",
     roleType: "DEVELOPER",
     desc: "Crime Sketcher",
     coat: "shirt_suspenders",
@@ -140,9 +120,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "tweed_gent",
-    topTitle: "МИРНИЙ МЕШКАНЕЦЬ",
-    bottomTitle: "МИРНЫЙ ЖИТЕЛЬ",
-    enTitle: "TWEED GENT",
+    title: "ARCHITECT",
+    tagline: "SENIOR DEV",
     roleType: "DEVELOPER",
     desc: "Senior Architect",
     coat: "tweed_vest",
@@ -154,9 +133,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "pipe_sleuth",
-    topTitle: "МИРНИЙ МЕШКАНЕЦЬ",
-    bottomTitle: "МИРНЫЙ ЖИТЕЛЬ",
-    enTitle: "PIPE SLEUTH",
+    title: "DETECTIVE",
+    tagline: "BUG HUNTER",
     roleType: "DEVELOPER",
     desc: "Code Detective",
     coat: "red_cardigan",
@@ -168,9 +146,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "ginger_rascal",
-    topTitle: "МИРНИЙ МЕШКАНЕЦЬ",
-    bottomTitle: "МИРНЫЙ ЖИТЕЛЬ",
-    enTitle: "GINGER RASCAL",
+    title: "ROOKIE",
+    tagline: "JUNIOR CODER",
     roleType: "DEVELOPER",
     desc: "Rookie Coder",
     coat: "denim_overalls",
@@ -183,9 +160,8 @@ export const CAT_TAROT_ARCHETYPES = [
   },
   {
     id: "jazz_trumpeter",
-    topTitle: "МИРНИЙ МЕШКАНЕЦЬ",
-    bottomTitle: "МИРНЫЙ ЖИТЕЛЬ",
-    enTitle: "JAZZ TRUMPETER",
+    title: "VIRTUOSO",
+    tagline: "SYNTH HACKER",
     roleType: "DEVELOPER",
     desc: "Synth Virtuoso",
     coat: "grey_suit",
@@ -200,11 +176,9 @@ export const CAT_TAROT_ARCHETYPES = [
 export function getCatArchetype(player, fallbackIndex = 0) {
   if (!player) return CAT_TAROT_ARCHETYPES[fallbackIndex % CAT_TAROT_ARCHETYPES.length];
   if (player.role === "MAFIA") {
-    // Pick from mafia archetypes (Mafia Don, Killer, Courtesan, Maniac)
     const mafiaList = [CAT_TAROT_ARCHETYPES[4], CAT_TAROT_ARCHETYPES[1], CAT_TAROT_ARCHETYPES[2], CAT_TAROT_ARCHETYPES[3]];
     return mafiaList[fallbackIndex % mafiaList.length];
   }
-  // Deterministic mapping by player id or index
   let hash = 0;
   const str = player.id || player.name || String(fallbackIndex);
   for (let i = 0; i < str.length; i++) {
@@ -281,12 +255,10 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
         {archetype.coat === "striped_suit" && (
           <g>
             <path d="M 22 150 L 32 88 L 88 88 L 98 150 Z" fill="#09090b" />
-            {/* Vertical Beetlejuice Stripes */}
             <line x1="28" y1="90" x2="24" y2="150" stroke="#ffffff" strokeWidth="3" />
             <line x1="38" y1="90" x2="36" y2="150" stroke="#ffffff" strokeWidth="3" />
             <line x1="82" y1="90" x2="84" y2="150" stroke="#ffffff" strokeWidth="3" />
             <line x1="92" y1="90" x2="96" y2="150" stroke="#ffffff" strokeWidth="3" />
-            {/* Green Shirt + Hot Pink Tie */}
             <polygon points="46,88 60,135 74,88" fill="#16a34a" />
             <polygon points="57,92 63,92 60,128" fill="#f43f5e" />
           </g>
@@ -310,7 +282,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
         {archetype.coat === "judge_robe" && (
           <g>
             <path d="M 20 150 L 32 85 L 88 85 L 100 150 Z" fill="#09090b" />
-            {/* White Judicial Bib Bands */}
             <rect x="52" y="85" width="6" height="32" fill="#f8fafc" />
             <rect x="62" y="85" width="6" height="32" fill="#f8fafc" />
           </g>
@@ -319,7 +290,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
         {archetype.coat === "shirt_suspenders" && (
           <g>
             <path d="M 24 150 L 34 88 L 86 88 L 96 150 Z" fill="#f8fafc" />
-            {/* Suspenders */}
             <line x1="42" y1="88" x2="42" y2="150" stroke="#0f172a" strokeWidth="4" />
             <line x1="78" y1="88" x2="78" y2="150" stroke="#0f172a" strokeWidth="4" />
             <polygon points="57,92 63,92 60,120" fill="#dc2626" />
@@ -384,17 +354,15 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
         {/* 5. EYES & EXPRESSION */}
         <ellipse cx="47" cy="53" rx="6.5" ry="7.5" fill={eye} />
         <ellipse cx="73" cy="53" rx="6.5" ry="7.5" fill={eye} />
-        {/* Slit Pupils */}
         <ellipse cx="47" cy="53" rx="1.8" ry="6" fill="#000000" />
         <ellipse cx="73" cy="53" rx="1.8" ry="6" fill="#000000" />
-        {/* Eye Shine */}
         <circle cx="49" cy="50" r="1.5" fill="#ffffff" />
         <circle cx="75" cy="50" r="1.5" fill="#ffffff" />
 
         {/* Nose */}
         <polygon points="60,63 56,59 64,59" fill="#f43f5e" />
 
-        {/* Mouth & Expression */}
+        {/* Mouth */}
         {archetype.expression === "mad_grin" ? (
           <g>
             <path d="M 50 64 Q 60 76 70 64 Z" fill="#881337" stroke="#000" strokeWidth="1" />
@@ -407,7 +375,7 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
           <path d="M 55 64 Q 60 67 65 64" fill="none" stroke="#000000" strokeWidth="1.2" />
         )}
 
-        {/* 6. HATS & WIGS */}
+        {/* 6. HATS & ACCESSORIES */}
         {archetype.hat === "bowler" && (
           <g>
             <ellipse cx="60" cy="35" rx="23" ry="5" fill="#18181b" />
@@ -509,7 +477,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
             <rect x="0" y="0" width="38" height="2.5" fill="#0f172a" />
             <rect x="34" y="-0.5" width="6" height="3.5" fill="#f8fafc" />
             <circle cx="40" cy="1.2" r="1.5" fill="#ef4444" />
-            {/* Smoke wisp */}
             <path d="M 42 1 Q 50 -10 46 -20 Q 55 -30 50 -40" fill="none" stroke="#e2e8f0" strokeWidth="1.2" opacity="0.6" />
           </g>
         )}
@@ -533,7 +500,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
         {archetype.prop === "inkblot_card" && (
           <g transform="translate(38, 108)">
             <rect x="0" y="0" width="44" height="32" fill="#ffffff" stroke="#0f172a" strokeWidth="1" rx="2" />
-            {/* Rorschach Butterfly Inkblot */}
             <path d="M 22 8 Q 12 12 10 20 Q 18 24 22 28 Q 26 24 34 20 Q 32 12 22 8 Z" fill="#09090b" />
             <circle cx="22" cy="18" r="2" fill="#ffffff" />
           </g>
@@ -552,7 +518,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
             <line x1="4" y1="8" x2="24" y2="8" stroke="#78350f" strokeWidth="1" />
             <line x1="4" y1="14" x2="20" y2="14" stroke="#78350f" strokeWidth="1" />
             <line x1="4" y1="20" x2="24" y2="20" stroke="#78350f" strokeWidth="1" />
-            {/* Pencil */}
             <line x1="-12" y1="10" x2="6" y2="2" stroke="#dc2626" strokeWidth="2.5" />
           </g>
         )}
@@ -561,7 +526,6 @@ export function CatIllustration({ archetype, isMafiaCard = false }) {
           <g transform="translate(56, 68)">
             <path d="M 0 0 Q 15 12 22 0" fill="none" stroke="#78350f" strokeWidth="3" />
             <rect x="20" y="-8" width="9" height="12" fill="#9a3412" rx="1.5" />
-            {/* Smoke */}
             <path d="M 24 -10 Q 28 -20 22 -30 Q 30 -40 26 -50" fill="none" stroke="#e2e8f0" strokeWidth="1.2" opacity="0.6" />
           </g>
         )}
@@ -609,6 +573,16 @@ export default function CatTarotCard({
   const archetype = customArchetype || getCatArchetype(player, index);
   const isTargetMafia = showRole ? isMafia : (player?.role === "MAFIA" && isRevealed);
 
+  // Top header text: prioritize the actual user name
+  const topHeaderTitle = player?.name
+    ? player.name.toUpperCase()
+    : archetype.title;
+
+  // Bottom subtitle text: clear English role / archetype designation
+  const bottomRoleTitle = isTargetMafia
+    ? "MAFIA"
+    : archetype.title;
+
   return (
     <div
       onClick={isSelectable ? onClick : undefined}
@@ -631,7 +605,7 @@ export default function CatTarotCard({
         {/* Vintage Background Texture */}
         <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
-        {/* 4 Ornamental Gold Filigree Corners (Matching the reference card deck) */}
+        {/* 4 Ornamental Gold Filigree Corners */}
         <div className="absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 border-[#d4af37] rounded-tl-sm pointer-events-none">
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -top-0.5 -left-0.5" />
         </div>
@@ -645,10 +619,11 @@ export default function CatTarotCard({
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -bottom-0.5 -right-0.5" />
         </div>
 
-        {/* TOP TITLE: Gold Serif Ukrainian Header (e.g. ЛІКАР, КІЛЕР, МАФІЯ, СУДДЯ) */}
+        {/* TOP TITLE: Gold Serif User Name Header */}
         <div className="text-center pb-1 border-b border-[#2a3c5a] relative z-10">
-          <div className="text-[10px] sm:text-[11px] font-black tracking-widest text-[#f5c563] uppercase font-serif drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate px-1">
-            {isTargetMafia ? "МАФІЯ" : archetype.topTitle}
+          <div className="text-[11px] sm:text-[12px] font-black tracking-wider text-[#fcd34d] uppercase font-serif drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate px-1 flex items-center justify-center space-x-1">
+            <span>{topHeaderTitle}</span>
+            {isSelf && <span className="text-[9px] text-amber-300 font-normal lowercase">(you)</span>}
           </div>
         </div>
 
@@ -669,53 +644,49 @@ export default function CatTarotCard({
 
           {/* Custom Badge (e.g. Ready, Host, Voted) */}
           {badgeText && (
-            <div className="absolute top-1 right-1 bg-black/85 border border-amber-500/80 rounded px-1.5 py-0.2 text-[8px] font-mono text-amber-300 shadow">
+            <div className="absolute top-1 right-1 bg-black/85 border border-amber-500/80 rounded px-1.5 py-0.5 text-[8px] font-mono text-amber-300 shadow">
               {badgeText}
             </div>
           )}
         </div>
 
-        {/* BOTTOM TITLE: Gold Serif Russian Subtitle (e.g. ДОКТОР, КИЛЛЕР, МАФИЯ, СУДЬЯ) */}
+        {/* BOTTOM TITLE: English Role / Archetype Designation */}
         <div className="text-center pt-0.5 border-t border-[#2a3c5a] relative z-10">
-          <div className="text-[9px] sm:text-[10px] font-black tracking-wider text-[#e6b85c] uppercase font-serif truncate px-1">
-            {isTargetMafia ? "МАФИЯ" : archetype.bottomTitle}
+          <div className="text-[9px] sm:text-[10px] font-black tracking-widest text-[#e6b85c] uppercase font-serif truncate px-1">
+            {bottomRoleTitle}
+          </div>
+          <div className="text-[8px] font-mono text-slate-400 tracking-tight truncate">
+            {isTargetMafia ? "SYNDICATE" : archetype.tagline}
           </div>
         </div>
 
-        {/* PLAYER FOOTER: Name & Heartbeat / Status */}
-        {player && (
-          <div className="w-full mt-1.5 pt-1 border-t border-slate-800/80 text-center relative z-10">
-            <div className="font-bold text-xs text-slate-100 truncate flex items-center justify-center space-x-1">
-              <span>{player.name}</span>
-              {isSelf && <span className="text-[9px] text-amber-400 font-normal">(You)</span>}
-            </div>
-
-            {/* Animated EKG Heartbeat */}
-            <div className="w-full h-3 mt-0.5 flex items-center justify-center relative overflow-hidden">
-              {isAlive ? (
-                <svg
-                  viewBox="0 0 100 20"
-                  className={`w-full h-full ${
-                    isTargetMafia
-                      ? "text-rose-500 drop-shadow-[0_0_3px_rgba(244,63,94,0.8)]"
-                      : "text-emerald-400 drop-shadow-[0_0_3px_rgba(52,211,153,0.8)]"
-                  }`}
-                >
-                  <path
-                    d="M 0 10 L 25 10 L 32 3 L 40 18 L 48 2 L 56 16 L 62 10 L 100 10"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <div className="w-full h-[2px] bg-slate-700 relative" />
-              )}
-            </div>
+        {/* PLAYER FOOTER: Vital Pulse Line */}
+        <div className="w-full mt-1 pt-0.5 border-t border-slate-800/80 text-center relative z-10">
+          {/* Animated EKG Heartbeat */}
+          <div className="w-full h-3 flex items-center justify-center relative overflow-hidden">
+            {isAlive ? (
+              <svg
+                viewBox="0 0 100 20"
+                className={`w-full h-full ${
+                  isTargetMafia
+                    ? "text-rose-500 drop-shadow-[0_0_3px_rgba(244,63,94,0.8)]"
+                    : "text-emerald-400 drop-shadow-[0_0_3px_rgba(52,211,153,0.8)]"
+                }`}
+              >
+                <path
+                  d="M 0 10 L 25 10 L 32 3 L 40 18 L 48 2 L 56 16 L 62 10 L 100 10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <div className="w-full h-[2px] bg-slate-700 relative" />
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
