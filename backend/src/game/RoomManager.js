@@ -32,7 +32,11 @@ export class RoomManager {
       roomCode = this.generateRoomCode();
     }
 
-    const defaultChallenge = CHALLENGES[0];
+    const defaultChallenge = getChallengeById(settings.challengeId) || CHALLENGES[0];
+    const initialFiles = defaultChallenge.files
+      ? { ...defaultChallenge.files }
+      : { [defaultChallenge.activeFileName || "main.js"]: defaultChallenge.starterCode };
+
     const room = {
       code: roomCode,
       createdAt: Date.now(),
@@ -41,11 +45,12 @@ export class RoomManager {
       settings: {
         durationMinutes: settings.durationMinutes || 10,
         mafiaCount: settings.mafiaCount || 1,
-        challengeId: settings.challengeId || defaultChallenge.id,
+        challengeId: defaultChallenge.id,
         votingDurationSeconds: settings.votingDurationSeconds || 45
       },
       challenge: defaultChallenge,
       currentCode: defaultChallenge.starterCode,
+      files: initialFiles,
       players: new Map(), // playerId -> player
       activityLog: [
         {
@@ -218,7 +223,7 @@ export class RoomManager {
     return { room };
   }
 
-  updateCode(roomCode, playerId, newCode) {
+  updateCode(roomCode, playerId, newCode, activeFileName, filesMap) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
     const player = room.players.get(playerId);
@@ -237,13 +242,24 @@ export class RoomManager {
       role: player?.role || "DEVELOPER",
       isAlive: player?.isAlive ?? true,
       code: newCode,
+      activeFileName: activeFileName || room.challenge?.activeFileName || "main.js",
+      files: filesMap || (room.challenge?.files ? { ...room.challenge.files } : { "main.js": newCode }),
       testResults: null
     };
 
     ws.code = newCode;
+    if (activeFileName) ws.activeFileName = activeFileName;
+    if (filesMap && typeof filesMap === "object" && Object.keys(filesMap).length > 0) {
+      ws.files = { ...filesMap };
+    } else if (ws.files) {
+      ws.files[ws.activeFileName || "main.js"] = newCode;
+    }
     ws.lastUpdated = Date.now();
     room.playerWorkspaces.set(playerId, ws);
     room.currentCode = newCode;
+    if (ws.files) {
+      room.files = { ...ws.files };
+    }
 
     // Throttle activity log entry for code editing (at most once every 3.5s per player)
     const now = Date.now();
@@ -256,7 +272,7 @@ export class RoomManager {
         type: "CODE_EDIT",
         playerId: player ? player.id : null,
         playerName: player ? player.name : "Anonymous",
-        text: `${player ? player.name : "A player"} modified their workspace`,
+        text: `${player ? player.name : "A player"} modified [${ws.activeFileName || "workspace"}]`,
         timestamp: now
       });
     }
@@ -264,7 +280,7 @@ export class RoomManager {
     return room;
   }
 
-  tamperPlayerCode(roomCode, mafiaId, targetPlayerId, tamperedCode) {
+  tamperPlayerCode(roomCode, mafiaId, targetPlayerId, tamperedCode, targetFileName) {
     const room = this.getRoom(roomCode);
     if (!room) return { error: "Room not found" };
     const mafia = room.players.get(mafiaId);
@@ -275,6 +291,10 @@ export class RoomManager {
     if (!targetWs) return { error: "Target workspace not found" };
 
     targetWs.code = tamperedCode;
+    const fn = targetFileName || targetWs.activeFileName || "main.js";
+    if (targetWs.files) {
+      targetWs.files[fn] = tamperedCode;
+    }
     targetWs.lastUpdated = Date.now();
     room.playerWorkspaces.set(targetPlayerId, targetWs);
 
@@ -285,7 +305,7 @@ export class RoomManager {
       timestamp: Date.now()
     });
 
-    return { success: true, targetPlayerId, code: tamperedCode };
+    return { success: true, targetPlayerId, code: tamperedCode, fileName: fn };
   }
 
   runTests(roomCode, playerId) {
@@ -293,8 +313,9 @@ export class RoomManager {
     if (!room) return null;
     const player = room.players.get(playerId);
 
-    const playerCode = room.playerWorkspaces?.get(playerId)?.code || room.currentCode;
-    const testResults = runChallengeTests(playerCode, room.challenge.testSuite);
+    const ws = room.playerWorkspaces?.get(playerId);
+    const playerFilesOrCode = ws?.files || room.files || room.challenge?.files || ws?.code || room.currentCode;
+    const testResults = runChallengeTests(playerFilesOrCode, room.challenge?.testSuite || []);
     room.testResults = testResults;
     if (room.playerWorkspaces?.has(playerId)) {
       room.playerWorkspaces.get(playerId).testResults = testResults;
@@ -518,6 +539,201 @@ export class RoomManager {
             playerId: ws.playerId,
             playerName: ws.playerName,
             playerAvatar: ws.playerAvatar,
+      type: "TESTS_RUN",
+      playerName: player ? player.name : "Player",
+      passed: testResults.allPassed,
+      text: `${player ? player.name : "Player"} executed test suite (${testResults.passedCount}/${testResults.totalCount} passing)`,
+      timestamp: Date.now()
+    });
+
+    // Check Developer Victory (all tests pass)
+    if (testResults.allPassed) {
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "DEVELOPERS";
+      room.winReason = "Developers successfully stabilized the application and passed 100% of the unit tests!";
+      if (room.timer) clearInterval(room.timer);
+    }
+
+    return { room, testResults, newlyUnlockedClues };
+  }
+
+  callEmergencyMeeting(roomCode, callerId) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { error: "Room not found" };
+    if (room.status !== GAME_STATES.PLAYING) return { error: "Cannot call meeting right now" };
+
+    const caller = room.players.get(callerId);
+    if (!caller || !caller.isAlive) return { error: "Only alive players can call meetings" };
+
+    // Reset votes
+    for (const p of room.players.values()) {
+      p.hasVoted = false;
+      p.voteTarget = null;
+    }
+
+    room.status = GAME_STATES.VOTING;
+    room.meeting = {
+      callerId,
+      callerName: caller.name,
+      startedAt: Date.now(),
+      timeLeftSeconds: room.settings.votingDurationSeconds || 45
+    };
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "MEETING_CALLED",
+      playerName: caller.name,
+      text: `🚨 EMERGENCY DEBUG MEETING called by ${caller.name}!`,
+      timestamp: Date.now()
+    });
+
+    return { room, meeting: room.meeting };
+  }
+
+  castVote(roomCode, voterId, targetPlayerId) {
+    const room = this.getRoom(roomCode);
+    if (!room || room.status !== GAME_STATES.VOTING) return { error: "No active voting session" };
+
+    const voter = room.players.get(voterId);
+    if (!voter || !voter.isAlive) return { error: "Dead players cannot vote" };
+    if (voter.hasVoted) return { error: "Already cast your vote" };
+
+    voter.hasVoted = true;
+    voter.voteTarget = targetPlayerId; // null = skip vote
+
+    const target = targetPlayerId ? room.players.get(targetPlayerId) : null;
+    const targetName = target ? target.name : "SKIP";
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "VOTE_CAST",
+      playerName: voter.name,
+      text: `${voter.name} submitted their vote [Target: ${targetName}]`,
+      timestamp: Date.now()
+    });
+
+    // Check if all alive players have voted
+    const alivePlayers = Array.from(room.players.values()).filter(p => p.isAlive);
+    const allVoted = alivePlayers.every(p => p.hasVoted);
+
+    return { room, allVoted };
+  }
+
+  resolveVoting(roomCode) {
+    const room = this.getRoom(roomCode);
+    if (!room) return null;
+
+    // Tally votes
+    const votes = new Map(); // targetId (or "SKIP") -> count
+    for (const p of room.players.values()) {
+      if (p.isAlive && p.voteTarget !== undefined) {
+        const target = p.voteTarget || "SKIP";
+        votes.set(target, (votes.get(target) || 0) + 1);
+      }
+    }
+
+    let maxVotes = 0;
+    let ejectedTargetId = null;
+    let isTie = false;
+
+    for (const [target, count] of votes.entries()) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        ejectedTargetId = target;
+        isTie = false;
+      } else if (count === maxVotes) {
+        isTie = true;
+      }
+    }
+
+    let ejectedPlayer = null;
+    if (!isTie && ejectedTargetId && ejectedTargetId !== "SKIP") {
+      ejectedPlayer = room.players.get(ejectedTargetId);
+      if (ejectedPlayer) {
+        ejectedPlayer.isAlive = false;
+      }
+    }
+
+    room.activityLog.push({
+      id: uuidv4(),
+      type: "MEETING_RESOLVED",
+      text: ejectedPlayer
+        ? `⚖️ Voting concluded: ${ejectedPlayer.name} was ejected! (Role: ${ejectedPlayer.role})`
+        : "⚖️ Voting concluded: No player was ejected (Tie or Skip majority)",
+      timestamp: Date.now()
+    });
+
+    // Reset hasVoted and voteTarget flags for all players
+    for (const p of room.players.values()) {
+      p.hasVoted = false;
+      p.voteTarget = null;
+    }
+
+    // Always clear active meeting object
+    room.meeting = null;
+
+    // Check Win/Loss conditions after ejection
+    const remainingAlive = Array.from(room.players.values()).filter(p => p.isAlive);
+    const aliveMafia = remainingAlive.filter(p => p.role === "MAFIA");
+    const aliveDevs = remainingAlive.filter(p => p.role === "DEVELOPER");
+
+    if (aliveMafia.length === 0) {
+      // Developers win: All Mafia eliminated
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "DEVELOPERS";
+      room.winReason = "All Code Mafia saboteurs were identified and ejected from the team!";
+    } else if (aliveMafia.length >= aliveDevs.length) {
+      // Mafia wins: Mafia parity or majority
+      room.status = GAME_STATES.GAME_OVER;
+      room.winner = "MAFIA";
+      room.winReason = "Code Mafia gained parity over the development team!";
+    } else {
+      // Resume playing
+      room.status = GAME_STATES.PLAYING;
+    }
+
+    return {
+      room,
+      ejectedPlayer: ejectedPlayer ? {
+        id: ejectedPlayer.id,
+        name: ejectedPlayer.name,
+        role: ejectedPlayer.role
+      } : null,
+      votesSummary: Object.fromEntries(votes)
+    };
+  }
+
+  // Sanitize room data for a specific player (hides other players' secret roles unless game over)
+  sanitizeRoomForPlayer(room, playerId) {
+    if (!room) return null;
+    const isGameOver = room.status === GAME_STATES.GAME_OVER;
+    const selfPlayer = room.players.get(playerId);
+
+    const playersObj = {};
+    for (const [id, player] of room.players.entries()) {
+      const isSelf = id === playerId;
+      playersObj[id] = {
+        id: player.id,
+        name: player.name,
+        avatar: player.avatar,
+        isHost: player.isHost,
+        isReady: player.isReady,
+        isAlive: player.isAlive,
+        hasVoted: player.hasVoted,
+        // Only reveal secret role if it's the player themselves or if the game is over
+        role: (isSelf || isGameOver) ? player.role : null,
+        roleDetails: (isSelf || isGameOver) ? player.roleDetails : null
+      };
+    }
+
+    // Prepare Mafia surveillance feed
+    const surveillanceFeed = (selfPlayer?.role === "MAFIA" || isGameOver)
+      ? Array.from(room.playerWorkspaces?.values() || [])
+          .filter(ws => ws.playerId !== playerId)
+          .map(ws => ({
+            playerId: ws.playerId,
+            playerName: ws.playerName,
+            playerAvatar: ws.playerAvatar,
             role: isGameOver ? ws.role : "DEVELOPER",
             code: ws.code,
             testResults: ws.testResults,
@@ -526,27 +742,38 @@ export class RoomManager {
           }))
       : [];
 
+    const ws = room.playerWorkspaces?.get(playerId);
+    const resolvedFiles = ws?.files || room.files || room.challenge?.files || {
+      [room.challenge?.activeFileName || "main.js"]: ws?.code || room.currentCode || room.challenge?.starterCode || ""
+    };
+
     return {
       code: room.code,
       status: room.status,
       hostId: room.hostId,
       settings: room.settings,
       challenge: {
-        id: room.challenge.id,
-        title: room.challenge.title,
-        category: room.challenge.category,
-        difficulty: room.challenge.difficulty,
-        description: room.challenge.description,
-        bugsCount: room.challenge.bugsCount,
-        devGoal: room.challenge.devGoal,
-        mafiaGoal: room.challenge.mafiaGoal,
-        testSuite: room.challenge.testSuite.map(t => ({ id: t.id, name: t.name }))
+        id: room.challenge?.id,
+        title: room.challenge?.title,
+        category: room.challenge?.category,
+        difficulty: room.challenge?.difficulty,
+        language: room.challenge?.language || "javascript",
+        description: room.challenge?.description,
+        bugsCount: room.challenge?.bugsCount,
+        devGoal: room.challenge?.devGoal,
+        mafiaGoal: room.challenge?.mafiaGoal,
+        activeFileName: ws?.activeFileName || room.challenge?.activeFileName || Object.keys(resolvedFiles)[0] || "main.js",
+        files: resolvedFiles,
+        starterCode: room.challenge?.starterCode,
+        testSuite: (room.challenge?.testSuite || []).map(t => ({ id: t.id, name: t.name }))
       },
-      currentCode: room.playerWorkspaces?.get(playerId)?.code || room.currentCode,
+      currentCode: ws?.code || room.currentCode,
+      activeFileName: ws?.activeFileName || room.challenge?.activeFileName || Object.keys(resolvedFiles)[0] || "main.js",
+      files: resolvedFiles,
       players: playersObj,
       activityLog: room.activityLog.slice(-50),
       chatMessages: (room.chatMessages || []).slice(-100),
-      testResults: room.playerWorkspaces?.get(playerId)?.testResults || room.testResults,
+      testResults: ws?.testResults || room.testResults,
       meeting: room.meeting,
       winner: room.winner,
       winReason: room.winReason,

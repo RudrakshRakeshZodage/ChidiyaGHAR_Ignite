@@ -139,18 +139,32 @@ export default function App() {
         }
       });
 
-      socket.on("mafia:screen_update", ({ targetPlayerId, targetPlayerName, code: targetCode }) => {
-        setSurveillanceFeed((prev) => {
+      socket.on("mafia:screen_update", ({ targetPlayerId, targetPlayerName, code: targetCode, fileName, files }) => {
+        setSurveillanceFeed(prev => {
           const exists = prev.some(ws => ws.playerId === targetPlayerId);
           if (exists) {
-            return prev.map(ws => ws.playerId === targetPlayerId ? { ...ws, code: targetCode, lastUpdated: Date.now() } : ws);
+            return prev.map(ws => ws.playerId === targetPlayerId ? { ...ws, code: targetCode, fileName, files, lastUpdated: Date.now() } : ws);
           }
-          return [...prev, { playerId: targetPlayerId, playerName: targetPlayerName, code: targetCode, lastUpdated: Date.now() }];
+          return [...prev, { playerId: targetPlayerId, playerName: targetPlayerName, code: targetCode, fileName, files, lastUpdated: Date.now() }];
         });
       });
 
-      socket.on("code:sync", ({ code: newCode, updatedByName }) => {
+      socket.on("code:sync", ({ code: newCode, fileName, updatedByName }) => {
         setCode(newCode);
+        if (fileName) {
+          setRoom(prev => {
+            if (!prev) return prev;
+            const updatedFiles = { ...(prev.challenge?.files || {}), [fileName]: newCode };
+            return {
+              ...prev,
+              challenge: {
+                ...prev.challenge,
+                files: updatedFiles,
+                activeFileName: fileName
+              }
+            };
+          });
+        }
       });
 
       socket.on("game:phase_change", ({ phase: newPhase, phaseTimeRemaining: ptr, snapshotBeforeCode: sbc, currentCode: cc }) => {
@@ -482,11 +496,24 @@ export default function App() {
   };
 
   // Code Change & Typing Presence
-  const handleCodeChange = (newCode) => {
+  const handleCodeChange = (newCode, fileName, updatedFiles) => {
     setCode(newCode);
+    if (updatedFiles) {
+      setRoom(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          challenge: {
+            ...prev.challenge,
+            files: updatedFiles,
+            activeFileName: fileName || prev.challenge?.activeFileName
+          }
+        };
+      });
+    }
     const socket = socketService.getSocket();
     if (socket && socket.connected) {
-      socket.emit("code:change", { code: newCode });
+      socket.emit("code:change", { code: newCode, fileName, files: updatedFiles });
     }
   };
 

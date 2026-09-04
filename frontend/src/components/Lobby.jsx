@@ -15,11 +15,11 @@ const AVATARS = [
 ];
 
 const PROMPT_SUGGESTIONS = [
-  "💳 Double-Spending Nonce Validator",
-  "🔐 JWT Token Expiration Guard",
-  "⏳ Sliding Window API Rate Limiter",
-  "🛒 Multi-Currency Cart Discount Engine",
-  "📦 Stock Inventory Mutex Lock"
+  "🗄️ SQL Merchant Net Revenue & Fraud Aggregates",
+  "🗄️ SQL Player High-Score Leaderboard & Win Rates",
+  "💳 Payment Gateway Idempotency & Currency Router",
+  "📦 Warehouse Stock Mutex & Order Pipeline",
+  "🔐 JWT Role Validator & Token Guard"
 ];
 
 export default function Lobby({

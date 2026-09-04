@@ -29,39 +29,42 @@ export function formatSqlTable(columns, rows) {
 }
 
 /**
- * Bundles multi-file project code into a single executable context
+ * Normalizes file map from either string or dictionary object
  */
-function bundleMultiFiles(codeOrFiles) {
+function normalizeFilesMap(codeOrFiles) {
   if (typeof codeOrFiles === "string") {
-    return codeOrFiles;
+    return { "main.js": codeOrFiles };
   }
   if (codeOrFiles && typeof codeOrFiles === "object") {
-    // Combine all files with module isolation emulation
-    const fileEntries = Object.entries(codeOrFiles);
-    return fileEntries.map(([filename, content]) => {
-      return `// === FILE: ${filename} ===\n${content}\n`;
-    }).join("\n\n");
+    return { ...codeOrFiles };
   }
-  return String(codeOrFiles || "");
+  return { "main.js": "" };
 }
 
 /**
- * Safe multi-language & multi-file execution engine
+ * Executes a multi-file project inside an isolated virtual module environment
  */
-export function runChallengeTests(userCode, testSuite = [], timeoutMs = 2500) {
+export function runChallengeTests(userCodeOrFiles, testSuite = [], timeoutMs = 2500) {
   const startTime = Date.now();
   const results = [];
   let allPassed = true;
   const globalTerminalLogs = [];
 
-  const bundledCode = bundleMultiFiles(userCode);
+  const filesMap = normalizeFilesMap(userCodeOrFiles);
+  const fileNames = Object.keys(filesMap);
+
+  globalTerminalLogs.push(`📂 Loaded ${fileNames.length} connected project file(s): [${fileNames.join(", ")}]`);
 
   for (const test of testSuite) {
     const testStart = Date.now();
-    let consoleLogs = [];
+    const consoleLogs = [];
 
-    const sandbox = {
-      console: {
+    // Virtual Module Registry for require('./file') resolution
+    const moduleCache = new Map();
+    const globalExportScope = {};
+
+    const createSandbox = () => {
+      const baseConsole = {
         log: (...args) => {
           const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
           consoleLogs.push(msg);
@@ -76,34 +79,111 @@ export function runChallengeTests(userCode, testSuite = [], timeoutMs = 2500) {
           const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
           consoleLogs.push("[WARN] " + msg);
           globalTerminalLogs.push(`[WARN] ${msg}`);
+        },
+        table: (data) => {
+          if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+            const cols = Object.keys(data[0]);
+            const tbl = formatSqlTable(cols, data);
+            consoleLogs.push(tbl);
+            globalTerminalLogs.push(tbl);
+          } else {
+            baseConsole.log(data);
+          }
         }
-      },
-      Math,
-      Date,
-      JSON,
-      Array,
-      Object,
-      String,
-      Number,
-      Boolean,
-      RegExp,
-      Map,
-      Set,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-      require: () => ({}),
-      exports: {},
-      module: { exports: {} }
+      };
+
+      const customRequire = (modulePath) => {
+        // Strip leading ./ or .\ 
+        const cleanPath = modulePath.replace(/^\.?[\/\\]/, "");
+        const matchedKey = Object.keys(filesMap).find(k => {
+          const baseK = k.replace(/^\.?[\/\\]/, "");
+          return baseK === cleanPath || 
+                 baseK.replace(/\.[a-z0-9]+$/i, "") === cleanPath.replace(/\.[a-z0-9]+$/i, "");
+        });
+
+        if (matchedKey && filesMap[matchedKey] !== undefined) {
+          if (moduleCache.has(matchedKey)) {
+            return moduleCache.get(matchedKey).exports;
+          }
+
+          const mod = { exports: {} };
+          moduleCache.set(matchedKey, mod);
+
+          const fileContent = filesMap[matchedKey];
+          // Execute module in sandbox
+          const modContext = vm.createContext({
+            ...sandbox,
+            module: mod,
+            exports: mod.exports,
+            require: customRequire,
+            __filename: matchedKey,
+            __dirname: "."
+          });
+
+          try {
+            const script = new vm.Script(fileContent, { filename: matchedKey });
+            script.runInContext(modContext, { timeout: timeoutMs });
+            // Copy top-level exports to global export scope
+            if (typeof mod.exports === 'object') {
+              Object.assign(globalExportScope, mod.exports);
+            }
+          } catch (e) {
+            // For SQL or non-JS files, store content as raw text
+            mod.exports = { rawText: fileContent, fileName: matchedKey };
+          }
+
+          return mod.exports;
+        }
+
+        // Fallback standard built-ins
+        if (modulePath === "assert" || modulePath === "node:assert") {
+          return (condition, message) => { if (!condition) throw new Error(message || "Assertion failed"); };
+        }
+        return {};
+      };
+
+      const sandbox = {
+        console: baseConsole,
+        Math,
+        Date,
+        JSON,
+        Array,
+        Object,
+        String,
+        Number,
+        Boolean,
+        RegExp,
+        Map,
+        Set,
+        parseInt,
+        parseFloat,
+        isNaN,
+        isFinite,
+        formatSqlTable,
+        require: customRequire,
+        exports: {},
+        module: { exports: {} }
+      };
+
+      return sandbox;
     };
 
-    const context = vm.createContext(sandbox);
+    const rootSandbox = createSandbox();
+    const rootContext = vm.createContext(rootSandbox);
 
     try {
-      // 1. Run user code in VM
-      const userScript = new vm.Script(bundledCode, { filename: "workspace.bundle.js" });
-      userScript.runInContext(context, { timeout: timeoutMs });
+      // 1. Pre-execute all project files to populate exports and modules
+      for (const [fname, fcontent] of Object.entries(filesMap)) {
+        if (fname.endsWith(".js") || fname.endsWith(".ts")) {
+          rootSandbox.require(`./${fname}`);
+        } else if (fname.endsWith(".sql")) {
+          // Expose SQL file content in context
+          rootSandbox[fname.replace(/[^a-zA-Z0-9_]/g, "_")] = fcontent;
+        }
+      }
+
+      // Expose globally exported symbols into root context
+      Object.assign(rootSandbox, globalExportScope);
 
       // 2. Run test assertion script
       if (test.runCode) {
@@ -113,7 +193,7 @@ export function runChallengeTests(userCode, testSuite = [], timeoutMs = 2500) {
           })();
         `, { filename: `test_${test.id}.js` });
 
-        testScript.runInContext(context, { timeout: timeoutMs });
+        testScript.runInContext(rootContext, { timeout: timeoutMs });
       }
 
       const duration = Date.now() - testStart;
@@ -155,3 +235,4 @@ export function runChallengeTests(userCode, testSuite = [], timeoutMs = 2500) {
     terminalLogs: globalTerminalLogs
   };
 }
+

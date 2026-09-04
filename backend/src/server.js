@@ -231,9 +231,9 @@ io.on("connection", (socket) => {
   });
 
   // 6. Individual Code Update (Streams to Mafia CCTV Surveillance)
-  socket.on("code:change", ({ code }) => {
+  socket.on("code:change", ({ code, fileName, files }) => {
     if (!currentRoomCode || !currentPlayerId) return;
-    const room = roomManager.updateCode(currentRoomCode, currentPlayerId, code);
+    const room = roomManager.updateCode(currentRoomCode, currentPlayerId, code, fileName, files);
     if (!room || room.error) return;
 
     const sender = room.players.get(currentPlayerId);
@@ -245,6 +245,8 @@ io.on("connection", (socket) => {
           targetPlayerId: currentPlayerId,
           targetPlayerName: sender?.name || "Developer",
           code,
+          fileName,
+          files,
           timestamp: Date.now()
         });
       }
@@ -252,9 +254,9 @@ io.on("connection", (socket) => {
   });
 
   // 6b. Mafia Sabotage Code Injection (During Freeze Window)
-  socket.on("mafia:tamper_code", ({ targetPlayerId, tamperedCode }, callback) => {
+  socket.on("mafia:tamper_code", ({ targetPlayerId, tamperedCode, targetFileName }, callback) => {
     if (!currentRoomCode || !currentPlayerId || !targetPlayerId) return;
-    const result = roomManager.tamperPlayerCode(currentRoomCode, currentPlayerId, targetPlayerId, tamperedCode);
+    const result = roomManager.tamperPlayerCode(currentRoomCode, currentPlayerId, targetPlayerId, tamperedCode, targetFileName);
     if (result.error) {
       callback?.({ success: false, error: result.error });
       return;
@@ -267,6 +269,7 @@ io.on("connection", (socket) => {
     if (targetPlayer?.socketId) {
       io.to(targetPlayer.socketId).emit("code:sync", {
         code: tamperedCode,
+        fileName: targetFileName || result.fileName,
         updatedBy: "SYSTEM_SYNC",
         updatedByName: "Sync Engine"
       });

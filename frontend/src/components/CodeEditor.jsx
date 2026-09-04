@@ -80,7 +80,7 @@ export default function CodeEditor({
   const handleSelectFile = (fileName) => {
     setActiveFile(fileName);
     const content = filesMap[fileName] || "";
-    onChange?.(content);
+    onChange?.(content, fileName, filesMap);
   };
 
   const handleAddNewFile = () => {
@@ -96,11 +96,11 @@ export default function CodeEditor({
 
     const updated = {
       ...filesMap,
-      [trimmed]: `// New module: ${trimmed}\n`
+      [trimmed]: language === "sql" ? `-- SQL Module: ${trimmed}\n` : `// Module: ${trimmed}\n`
     };
     setFilesMap(updated);
     setActiveFile(trimmed);
-    onChange?.(updated[trimmed]);
+    onChange?.(updated[trimmed], trimmed, updated);
   };
 
   const handleDeleteFile = (fileName, e) => {
@@ -116,7 +116,7 @@ export default function CodeEditor({
     setFilesMap(updated);
     const nextActive = Object.keys(updated)[0];
     setActiveFile(nextActive);
-    onChange?.(updated[nextActive]);
+    onChange?.(updated[nextActive], nextActive, updated);
   };
 
   const handleCopy = () => {
@@ -128,11 +128,12 @@ export default function CodeEditor({
   const handleChange = (e) => {
     if (effectiveReadOnly) return;
     const newContent = e.target.value;
-    setFilesMap(prev => ({
-      ...prev,
+    const updated = {
+      ...filesMap,
       [activeFile]: newContent
-    }));
-    onChange?.(newContent);
+    };
+    setFilesMap(updated);
+    onChange?.(newContent, activeFile, updated);
     onTyping?.();
   };
 
@@ -144,8 +145,9 @@ export default function CodeEditor({
       const start = e.target.selectionStart;
       const end = e.target.selectionEnd;
       const newCode = currentCode.substring(0, start) + "  " + currentCode.substring(end);
-      setFilesMap(prev => ({ ...prev, [activeFile]: newCode }));
-      onChange?.(newCode);
+      const updated = { ...filesMap, [activeFile]: newCode };
+      setFilesMap(updated);
+      onChange?.(newCode, activeFile, updated);
 
       setTimeout(() => {
         if (textareaRef.current) {
