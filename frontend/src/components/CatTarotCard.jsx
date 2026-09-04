@@ -597,7 +597,7 @@ export default function CatTarotCard({
       }`}
     >
       {/* Card Outer Shell with Navy Canvas & Double Gold Filigree Borders */}
-      <div className={`p-2 sm:p-2.5 rounded-xl border-2 flex flex-col justify-between relative overflow-hidden transition-all ${
+      <div className={`p-2.5 sm:p-3 pt-3.5 pb-2.5 rounded-xl border-2 flex flex-col justify-between relative overflow-hidden transition-all ${
         isTargetMafia
           ? "bg-[#14080c] border-[#9f1239] shadow-lg shadow-rose-950/50"
           : "bg-[#0b1322] border-[#b4883d] shadow-lg shadow-slate-950/70"
@@ -606,24 +606,31 @@ export default function CatTarotCard({
         <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
         {/* 4 Ornamental Gold Filigree Corners */}
-        <div className="absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 border-[#d4af37] rounded-tl-sm pointer-events-none">
+        <div className="absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-[#d4af37] rounded-tl-sm pointer-events-none">
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -top-0.5 -left-0.5" />
         </div>
-        <div className="absolute top-1 right-1 w-3 h-3 border-t-2 border-r-2 border-[#d4af37] rounded-tr-sm pointer-events-none">
+        <div className="absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-[#d4af37] rounded-tr-sm pointer-events-none">
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -top-0.5 -right-0.5" />
         </div>
-        <div className="absolute bottom-1 left-1 w-3 h-3 border-b-2 border-l-2 border-[#d4af37] rounded-bl-sm pointer-events-none">
+        <div className="absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-[#d4af37] rounded-bl-sm pointer-events-none">
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -bottom-0.5 -left-0.5" />
         </div>
-        <div className="absolute bottom-1 right-1 w-3 h-3 border-b-2 border-r-2 border-[#d4af37] rounded-br-sm pointer-events-none">
+        <div className="absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-[#d4af37] rounded-br-sm pointer-events-none">
           <div className="w-1 h-1 bg-[#d4af37] rounded-full absolute -bottom-0.5 -right-0.5" />
         </div>
 
-        {/* TOP TITLE: Gold Serif User Name Header */}
-        <div className="text-center pb-1 border-b border-[#2a3c5a] relative z-10">
-          <div className="text-[11px] sm:text-[12px] font-black tracking-wider text-[#fcd34d] uppercase font-serif drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate px-1 flex items-center justify-center space-x-1">
-            <span>{topHeaderTitle}</span>
-            {isSelf && <span className="text-[9px] text-amber-300 font-normal lowercase">(you)</span>}
+        {/* TOP TITLE: Gold Serif User Name Header (Safely padded from corner brackets) */}
+        <div className="text-center pb-1 border-b border-[#2a3c5a] relative z-10 px-2">
+          <div
+            title={player?.name || topHeaderTitle}
+            className="text-[10px] sm:text-[11px] font-black tracking-wide text-[#fcd34d] uppercase font-serif drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] truncate flex items-center justify-center space-x-1"
+          >
+            <span className="truncate">{topHeaderTitle}</span>
+            {isSelf && (
+              <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono font-normal lowercase shrink-0">
+                you
+              </span>
+            )}
           </div>
         </div>
 
@@ -651,8 +658,8 @@ export default function CatTarotCard({
         </div>
 
         {/* BOTTOM TITLE: English Role / Archetype Designation */}
-        <div className="text-center pt-0.5 border-t border-[#2a3c5a] relative z-10">
-          <div className="text-[9px] sm:text-[10px] font-black tracking-widest text-[#e6b85c] uppercase font-serif truncate px-1">
+        <div className="text-center pt-0.5 border-t border-[#2a3c5a] relative z-10 px-1">
+          <div className="text-[9px] sm:text-[10px] font-black tracking-widest text-[#e6b85c] uppercase font-serif truncate">
             {bottomRoleTitle}
           </div>
           <div className="text-[8px] font-mono text-slate-400 tracking-tight truncate">
