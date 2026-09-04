@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, Vote, Check, ShieldAlert, X, MessageSquare, Users } from 'lucide-react';
 import ChatBox from './ChatBox';
+import CatTarotCard from './CatTarotCard';
 
 export default function VotingModal({
   room,
@@ -109,42 +110,24 @@ export default function VotingModal({
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto pr-1">
-              {alivePlayers.map((p) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[340px] overflow-y-auto pr-1">
+              {alivePlayers.map((p, idx) => {
                 const isMe = p.id === player?.id;
                 const isSelected = selectedTargetId === p.id;
+                const canVoteThis = isAlive && !hasVoted;
 
                 return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={!isAlive || hasVoted}
-                    onClick={() => setSelectedTargetId(p.id)}
-                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition ${
-                      isSelected
-                        ? "bg-rose-950/60 border-rose-500 shadow-md shadow-rose-950/50 scale-[1.02]"
-                        : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
-                    } ${(!isAlive || hasVoted) ? "cursor-default" : "cursor-pointer"}`}
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg shadow">
-                        {p.avatar || "👨‍💻"}
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs text-slate-200 flex items-center space-x-1">
-                          <span>{p.name}</span>
-                          {isMe && <span className="text-[10px] text-sky-400 font-normal">(You)</span>}
-                        </div>
-                        <span className="text-[10px] text-slate-500">Active Suspect</span>
-                      </div>
-                    </div>
-
-                    {p.hasVoted && (
-                      <div className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-mono">
-                        Voted
-                      </div>
-                    )}
-                  </button>
+                  <div key={p.id} className="relative">
+                    <CatTarotCard
+                      player={{ ...p, isSelf: isMe }}
+                      index={idx}
+                      isSelected={isSelected}
+                      isSelectable={canVoteThis}
+                      onClick={() => canVoteThis && setSelectedTargetId(p.id)}
+                      compact={true}
+                      badgeText={p.hasVoted ? "VOTED" : isMe ? "YOU" : undefined}
+                    />
+                  </div>
                 );
               })}
             </div>

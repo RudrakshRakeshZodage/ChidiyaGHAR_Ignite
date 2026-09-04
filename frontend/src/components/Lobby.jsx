@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Play, Plus, ArrowRight, Shield, Bug, Sparkles, CheckCircle2, Circle, Flame, Cpu, Wand2, RefreshCw, Layers, Check, X } from 'lucide-react';
 import { CHALLENGES } from '../data/challenges';
+import CatTarotCard from './CatTarotCard';
 
 const AVATARS = [
   { id: "dev-1", icon: "👨‍💻", label: "Dev" },
@@ -180,51 +181,22 @@ export default function Lobby({
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {playersList.map((p) => {
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                {playersList.map((p, idx) => {
                   const isMe = p.id === player?.id;
-                  return (
-                    <div
-                      key={p.id}
-                      className={`p-4 rounded-xl border transition-all flex items-center justify-between ${
-                        isMe
-                          ? "bg-sky-950/30 border-sky-500/50 shadow-lg shadow-sky-950/20"
-                          : "bg-slate-900/60 border-slate-800"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">
-                          {p.avatar || "👨‍💻"}
-                        </div>
-                        <div>
-                          <div className="font-bold text-sm text-slate-200 flex items-center space-x-1.5">
-                            <span>{p.name}</span>
-                            {isMe && <span className="text-[10px] text-sky-400 font-normal">(You)</span>}
-                          </div>
-                          <div className="text-xs text-slate-500 flex items-center space-x-1">
-                            {p.isHost ? (
-                              <span className="text-amber-400 font-semibold font-mono">👑 Host</span>
-                            ) : (
-                              <span>Operative</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                  const badgeText = p.isHost
+                    ? (p.isReady ? "👑 READY" : "👑 HOST")
+                    : (p.isReady ? "READY" : "WAITING");
 
-                      <div className="flex items-center space-x-1 font-mono text-xs font-semibold">
-                        {p.isReady ? (
-                          <span className="flex items-center space-x-1 text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-2 py-0.5 rounded-full">
-                            <CheckCircle2 className="h-3 w-3" />
-                            <span>READY</span>
-                          </span>
-                        ) : (
-                          <span className="flex items-center space-x-1 text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
-                            <Circle className="h-3 w-3" />
-                            <span>WAITING</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  return (
+                    <CatTarotCard
+                      key={p.id}
+                      player={{ ...p, isSelf: isMe }}
+                      index={idx}
+                      isSelectable={false}
+                      compact={true}
+                      badgeText={badgeText}
+                    />
                   );
                 })}
               </div>
