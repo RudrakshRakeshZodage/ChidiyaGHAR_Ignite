@@ -23,6 +23,7 @@ import ChatBox from './components/ChatBox';
 import VotingModal from './components/VotingModal';
 import GameOverModal from './components/GameOverModal';
 import AuthModal from './components/AuthModal';
+import BloodSparksTrail from './components/BloodSparksTrail';
 import { Bug, Sparkles, AlertCircle, FileCode, ShieldCheck, Activity, Search, MessageSquare, Gift, Trophy } from 'lucide-react';
 
 export default function App() {
@@ -651,6 +652,9 @@ export default function App() {
   if (!room && currentView === 'landing') {
     return (
       <>
+        {/* Global Interactive Blood Sparks & Knife Cursor Canvas */}
+        <BloodSparksTrail />
+
         <LandingPage
           onEnterLobby={() => setCurrentView('lobby')}
           onOpenLeaderboard={() => setShowLeaderboardModal(true)}
@@ -691,7 +695,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080b11] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#050505] bg-grid-pattern text-slate-100 selection:bg-rose-500 selection:text-white relative">
+      {/* Global Interactive Blood Sparks & Knife Cursor Canvas */}
+      <BloodSparksTrail />
       {/* 5-second Auto-Close Countdown Toast / Banner */}
       {autoCloseCountdown !== null && (
         <div className="sticky top-0 z-50 bg-gradient-to-r from-rose-950 via-red-900 to-rose-950 text-white py-2.5 px-4 text-center font-mono text-xs font-bold border-b border-rose-500 shadow-2xl flex items-center justify-center space-x-2 animate-pulse">
@@ -759,22 +765,22 @@ export default function App() {
         {/* View 2: In-Game Coding Arena */}
         {isInGame && (
           <div className="flex-1 flex flex-col space-y-4">
-            {/* Challenge Info Banner */}
-            <div className="glass-card rounded-xl p-3 sm:p-4 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg bg-sky-950/80 border border-sky-800 text-sky-400 mt-0.5">
+            {/* Challenge Info Banner (Rockstar Red Dead Outlaw Theme) */}
+            <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-black via-[#140003] to-[#250207] border-2 border-[#e31b23]/50 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xl shadow-rose-950/60">
+              <div className="flex items-start space-x-3.5">
+                <div className="p-2.5 rounded-xl bg-[#1a0003] border-2 border-[#e31b23] text-[#e31b23] mt-0.5 shadow">
                   <FileCode className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <h2 className="font-bold text-white text-sm sm:text-base">
+                  <div className="flex items-center space-x-2.5">
+                    <h2 className="font-['Bebas_Neue'] tracking-wider text-white text-xl sm:text-2xl">
                       {room.challenge?.title}
                     </h2>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300 font-semibold font-mono">
+                    <span className="text-[10px] px-2.5 py-0.5 rounded bg-[#1a0f0f] border border-[#d97706] text-[#fcd34d] font-bold font-mono uppercase">
                       {room.challenge?.difficulty}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">
+                  <p className="text-xs text-slate-300 mt-1 line-clamp-2 font-sans">
                     {room.challenge?.description}
                   </p>
                 </div>
@@ -782,14 +788,14 @@ export default function App() {
 
               {/* Secret Objective Reminder */}
               {player?.role && (
-                <div className={`text-xs px-3 py-1.5 rounded-lg border font-semibold flex items-center space-x-2 shrink-0 ${
+                <div className={`text-xs px-4 py-2 rounded-xl border-2 font-['Bebas_Neue'] tracking-wider text-base flex items-center space-x-2 shrink-0 shadow-lg ${
                   player.role === "MAFIA"
-                    ? "bg-rose-950/60 border-rose-700 text-rose-300"
-                    : "bg-emerald-950/60 border-emerald-700 text-emerald-300"
+                    ? "bg-[#250207] border-[#e31b23] text-rose-300 shadow-rose-950/80"
+                    : "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-emerald-950/80"
                 }`}>
-                  <Bug className="h-3.5 w-3.5" />
+                  <Bug className="h-4 w-4" />
                   <span>
-                    {player.role === "MAFIA" ? "Sabotage code quietly" : "Fix bugs & pass all tests"}
+                    {player.role === "MAFIA" ? "SABOTAGE CODE QUIETLY" : "FIX BUGS & PASS ALL TESTS"}
                   </span>
                 </div>
               )}
@@ -835,14 +841,14 @@ export default function App() {
               {/* Right: Dynamic Multi-Tab Control Center (5 cols) */}
               <div className="lg:col-span-5 flex flex-col h-full space-y-3">
                 {/* Tab Switcher */}
-                <div className="grid grid-cols-5 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold gap-1 shadow">
+                <div className="grid grid-cols-5 p-1 rounded-xl bg-black border-2 border-[#2d1215] text-xs font-['Bebas_Neue'] tracking-wider gap-1 shadow-xl">
                   <button
                     type="button"
                     onClick={() => handleTabSwitch('tests')}
                     title="Automated Unit Tests"
-                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition text-sm ${
                       activeTab === 'tests'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow'
+                        ? 'bg-[#e31b23] text-white shadow-lg shadow-rose-950/80'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -854,16 +860,16 @@ export default function App() {
                     type="button"
                     onClick={() => handleTabSwitch('mystery')}
                     title="Mystery Box Clues Dossier"
-                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition text-sm ${
                       activeTab === 'mystery'
-                        ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow'
+                        ? 'bg-[#e31b23] text-white shadow-lg shadow-rose-950/80'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    <Gift className="h-3.5 w-3.5 text-purple-400" />
+                    <Gift className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Clues</span>
                     {unlockedMysteryClues.length > 0 && (
-                      <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-purple-500 text-white font-mono text-[8px] font-bold">
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#fcd34d] text-black font-mono text-[9px] font-black">
                         {unlockedMysteryClues.length}
                       </span>
                     )}
@@ -873,9 +879,9 @@ export default function App() {
                     type="button"
                     onClick={() => handleTabSwitch('activity')}
                     title="CCTV Activity Audit Log"
-                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition text-sm ${
                       activeTab === 'activity'
-                        ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow'
+                        ? 'bg-[#e31b23] text-white shadow-lg shadow-rose-950/80'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -886,10 +892,10 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleTabSwitch('evidence')}
-                    title="Evidence & Investigation Board"
-                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                    title="Investigative Crime Board"
+                    className={`py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition text-sm ${
                       activeTab === 'evidence'
-                        ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow'
+                        ? 'bg-[#e31b23] text-white shadow-lg shadow-rose-950/80'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -901,16 +907,16 @@ export default function App() {
                     type="button"
                     onClick={() => handleTabSwitch('chat')}
                     title="Live Team Discussion"
-                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition ${
+                    className={`relative py-2 px-1 rounded-lg flex items-center justify-center space-x-1 transition text-sm ${
                       activeTab === 'chat'
-                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow'
+                        ? 'bg-[#e31b23] text-white shadow-lg shadow-rose-950/80'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Chat</span>
                     {unreadChatCount > 0 && activeTab !== 'chat' && (
-                      <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-mono text-[9px] font-bold animate-bounce">
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full bg-[#fcd34d] text-black font-mono text-[9px] font-black animate-bounce">
                         {unreadChatCount}
                       </span>
                     )}

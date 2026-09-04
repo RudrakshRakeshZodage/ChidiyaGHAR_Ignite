@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Users, Play, Plus, ArrowRight, Shield, Bug, Sparkles, CheckCircle2, Circle, Flame, Cpu, Wand2, RefreshCw, Layers, Check, X } from 'lucide-react';
+import { Users, Play, Plus, ArrowRight, Shield, Bug, Sparkles, CheckCircle2, Circle, Flame, Cpu, Wand2, RefreshCw, Layers, Check, X, Skull, Award, Lock, FileCode } from 'lucide-react';
 import { CHALLENGES } from '../data/challenges';
 import CatTarotCard from './CatTarotCard';
 
 const AVATARS = [
   { id: "dev-1", icon: "👨‍💻", label: "Dev" },
   { id: "dev-2", icon: "👩‍💻", label: "Hacker" },
-  { id: "ninja", icon: "🥷", label: "Ninja" },
+  { id: "ninja", icon: "🥷", label: "Outlaw" },
   { id: "detective", icon: "🕵️", label: "Agent" },
-  { id: "cyborg", icon: "🤖", label: "Bot" },
-  { id: "wizard", icon: "🧙‍♂️", label: "Wizard" },
+  { id: "cyborg", icon: "🤖", label: "Cyborg" },
+  { id: "wizard", icon: "🧙‍♂️", label: "Mage" },
   { id: "alien", icon: "👾", label: "Alien" },
   { id: "ghost", icon: "👻", label: "Specter" }
 ];
@@ -112,51 +112,51 @@ export default function Lobby({
     });
   };
 
-  // If already inside a room lobby
-  if (room) {
-    const playersList = Object.values(room.players || {});
-    const isHost = player?.isHost;
-    const canStart = playersList.length >= 2 && playersList.length <= 8;
+  // When room is active in LOBBY state
+  if (room && room.status === "LOBBY") {
+    const isHost = player?.id === room.hostId || player?.isHost;
+    const playersList = Array.isArray(room.players)
+      ? room.players
+      : Object.values(room.players || {});
+    const readyCount = playersList.filter(p => p.isReady).length;
+    const canStart = isHost && playersList.length >= 1; // Allows 1 player dev test or multi
     const needsMorePlayers = playersList.length < 2;
 
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="glass-card rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
+      <div className="max-w-6xl mx-auto space-y-6 animate-fade-in select-none">
+        {/* Outlaw Red Dead Room Header Banner */}
+        <div className="rounded-2xl bg-gradient-to-r from-black via-[#140003] to-[#250207] p-6 sm:p-8 border-2 border-[#e31b23]/50 shadow-2xl shadow-rose-950/60 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#e31b23]/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Lobby Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-800 pb-6 mb-8 gap-4">
-            <div>
-              <div className="flex items-center space-x-3 mb-1">
-                <h1 className="text-2xl md:text-3xl font-black font-display tracking-wide text-white">
-                  MISSION LOBBY
-                </h1>
-                <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-sky-400 font-mono text-sm font-bold tracking-wider">
-                  #{room.code}
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#2d1215]">
+            <div className="space-y-1.5">
+              <div className="flex items-center space-x-2.5">
+                <span className="text-xs font-mono font-black tracking-widest text-[#e31b23] uppercase">
+                  OUTLAWS FOR LIFE • HQ LOBBY
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#1a0f0f] border border-[#d97706] text-[#fcd34d] text-xs font-mono font-black">
+                  ROOM #{room.code}
                 </span>
               </div>
-              <p className="text-sm text-slate-400 flex items-center space-x-2">
-                <span>Waiting for squad members (Min: 2, Max: 8).</span>
-                {needsMorePlayers && (
-                  <span className="text-amber-400 font-semibold font-mono text-xs bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded">
-                    Need 1 more player to start
-                  </span>
-                )}
+              <h1 className="text-3xl sm:text-4xl font-black font-['Bebas_Neue'] tracking-wider text-white">
+                CAMP HEADQUARTERS
+              </h1>
+              <p className="text-xs text-slate-300 font-sans">
+                {readyCount} of {playersList.length} operatives ready to deploy.
               </p>
             </div>
 
-            {/* Ready / Host Actions */}
+            {/* Action Buttons */}
             <div className="flex items-center space-x-3 w-full md:w-auto">
               <button
                 onClick={onToggleReady}
-                className={`flex-1 md:flex-initial px-5 py-2.5 rounded-xl font-bold text-sm transition shadow-lg ${
+                className={`flex-1 md:flex-initial px-6 py-3 rounded-xl font-['Bebas_Neue'] tracking-wider text-base transition shadow-lg ${
                   player?.isReady
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20"
-                    : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    ? "bg-emerald-700 hover:bg-emerald-600 text-white shadow-emerald-950/60 border border-emerald-500"
+                    : "bg-[#140003] hover:bg-[#200508] text-rose-200 border-2 border-[#e31b23]"
                 }`}
               >
-                {player?.isReady ? "✓ Ready for Mission" : "Mark as Ready"}
+                {player?.isReady ? "✓ READY FOR BLOOD" : "MARK AS READY"}
               </button>
 
               {isHost && (
@@ -164,9 +164,9 @@ export default function Lobby({
                   onClick={onStartGame}
                   disabled={!canStart}
                   title={needsMorePlayers ? "Minimum 2 players required to start the mission" : "Start the game mission"}
-                  className="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-purple-600 to-sky-600 hover:from-rose-500 hover:to-sky-500 text-white font-extrabold text-sm shadow-xl shadow-purple-600/25 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  className="flex-1 md:flex-initial px-8 py-3 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-white font-['Bebas_Neue'] tracking-wider text-lg shadow-2xl shadow-rose-950/80 transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 border border-red-400"
                 >
-                  <Play className="h-4 w-4 fill-white" />
+                  <Play className="h-5 w-5 fill-white" />
                   <span>START MISSION</span>
                 </button>
               )}
@@ -174,13 +174,13 @@ export default function Lobby({
           </div>
 
           {/* Grid Layout: Squad & Mission Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6">
             {/* Left: Connected Squad Roster */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-sky-400" />
-                  <span>Operatives Connected ({playersList.length} / 8)</span>
+                <h3 className="text-sm font-['Bebas_Neue'] tracking-widest text-[#fcd34d] flex items-center space-x-2 text-base">
+                  <Users className="h-4 w-4 text-[#e31b23]" />
+                  <span>OPERATIVES GATHERED ({playersList.length} / 8)</span>
                 </h3>
               </div>
 
@@ -207,40 +207,40 @@ export default function Lobby({
 
             {/* Right: Mission Overview */}
             <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-                <Shield className="h-4 w-4 text-rose-400" />
-                <span>Mission Parameters</span>
+              <h3 className="text-sm font-['Bebas_Neue'] tracking-widest text-[#fcd34d] flex items-center space-x-2 text-base">
+                <Shield className="h-4 w-4 text-[#e31b23]" />
+                <span>MISSION INTEL</span>
               </h3>
 
-              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-4">
+              <div className="p-5 rounded-xl bg-black/80 border-2 border-[#2d1215] space-y-4 shadow-xl">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 block mb-1">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#e31b23] block mb-1 font-bold">
                     {room.challenge?.category || "Target Challenge"}
                   </span>
-                  <h4 className="font-black text-slate-200 text-base leading-tight">
+                  <h4 className="font-['Bebas_Neue'] tracking-wider text-white text-xl leading-tight">
                     {room.challenge?.title || "Code Base Mission"}
                   </h4>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                  <p className="text-xs text-slate-300 mt-2 leading-relaxed font-sans">
                     {room.challenge?.description}
                   </p>
                 </div>
 
-                <div className="border-t border-slate-800 pt-3 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-slate-400">
+                <div className="border-t border-[#2d1215] pt-3 space-y-2 text-xs font-mono">
+                  <div className="flex items-center justify-between text-slate-300">
                     <span>Deliberate Bugs:</span>
-                    <span className="font-bold text-rose-400">{room.challenge?.bugsCount || 2} stealth bugs</span>
+                    <span className="font-black text-[#e31b23]">{room.challenge?.bugsCount || 2} stealth bugs</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-400">
+                  <div className="flex items-center justify-between text-slate-300">
                     <span>Automated Tests:</span>
-                    <span className="font-bold text-emerald-400">{room.challenge?.testSuite?.length || 3} test cases</span>
+                    <span className="font-black text-emerald-400">{room.challenge?.testSuite?.length || 3} test cases</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-400">
+                  <div className="flex items-center justify-between text-slate-300">
                     <span>Time Limit:</span>
-                    <span className="font-bold text-slate-200">{room.settings?.durationMinutes || 10} minutes</span>
+                    <span className="font-black text-white">{room.settings?.durationMinutes || 10} minutes</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-400">
+                  <div className="flex items-center justify-between text-slate-300">
                     <span>Secret Mafia:</span>
-                    <span className="font-bold text-rose-400">{room.settings?.mafiaCount || 1} player</span>
+                    <span className="font-black text-[#e31b23]">{room.settings?.mafiaCount || 1} outlaw</span>
                   </div>
                 </div>
               </div>
@@ -253,54 +253,54 @@ export default function Lobby({
 
   // Pre-room Welcome / Create / Join Form
   return (
-    <div className="max-w-xl mx-auto px-4 py-10">
-      <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-800 relative">
+    <div className="max-w-xl mx-auto px-4 py-8">
+      <div className="rounded-2xl p-6 sm:p-8 shadow-2xl bg-gradient-to-b from-black via-[#140003] to-black border-2 border-[#e31b23]/60 relative overflow-hidden">
         {/* Glow backdrop */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#e31b23]/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Title */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs font-bold uppercase tracking-widest mb-3">
-            <Flame className="h-3.5 w-3.5 text-rose-400" />
-            <span>Multiplayer Coding Challenge</span>
+        <div className="text-center mb-8 relative z-10">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#1a0003] border border-[#e31b23] text-rose-300 text-xs font-mono font-black uppercase tracking-widest mb-3">
+            <Flame className="h-3.5 w-3.5 text-[#e31b23]" />
+            <span>OUTLAWS CODE ARENA</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black font-display tracking-tight text-white">
-            ENTER CODE MAFIA
+          <h1 className="text-4xl sm:text-5xl font-black font-['Bebas_Neue'] tracking-wider text-white">
+            ENTER CODE MAFIA II
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+          <p className="text-xs sm:text-sm text-slate-300 mt-1 font-sans">
             Will you debug and stabilize the code, or stealthily sabotage the team from within?
           </p>
         </div>
 
         {/* Form */}
-        <div className="space-y-6">
+        <div className="space-y-6 relative z-10">
           {/* Nickname & Avatar */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-              Agent Identity
+            <label className="block text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d] text-sm">
+              OUTLAW IDENTITY (ALIAS)
             </label>
             <input
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Enter your hacker alias..."
+              placeholder="Enter your outlaw alias..."
               maxLength={16}
-              className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 text-sm font-semibold transition"
+              className="w-full px-4 py-3 rounded-xl bg-black border-2 border-[#2d1215] text-white placeholder-slate-500 focus:outline-none focus:border-[#e31b23] focus:ring-1 focus:ring-[#e31b23] text-sm font-bold transition shadow-inner"
             />
 
             {/* Avatar Picker */}
             <div className="pt-2">
-              <span className="text-[11px] text-slate-400 uppercase font-semibold">Choose Avatar</span>
+              <span className="text-[11px] text-slate-400 uppercase font-mono font-bold">CHOOSE ARCHETYPE AVATAR</span>
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mt-2">
                 {AVATARS.map((av) => (
                   <button
                     key={av.id}
                     type="button"
                     onClick={() => setSelectedAvatar(av.icon)}
-                    className={`h-11 rounded-xl flex items-center justify-center text-xl transition border ${
+                    className={`h-11 rounded-xl flex items-center justify-center text-xl transition border-2 ${
                       selectedAvatar === av.icon
-                        ? "bg-sky-950/80 border-sky-400 shadow-md shadow-sky-500/20 scale-105"
-                        : "bg-slate-900/80 border-slate-800 hover:border-slate-700"
+                        ? "bg-[#250207] border-[#e31b23] shadow-lg shadow-rose-950/80 scale-105"
+                        : "bg-black/80 border-[#2d1215] hover:border-[#e31b23]/50"
                     }`}
                   >
                     {av.icon}
@@ -311,13 +311,13 @@ export default function Lobby({
           </div>
 
           {/* Action Tabs: Create Match vs Join */}
-          <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
+          <div className="flex rounded-xl bg-black p-1 border-2 border-[#2d1215]">
             <button
               type="button"
               onClick={() => setTab("create")}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+              className={`flex-1 py-2.5 text-sm font-['Bebas_Neue'] tracking-wider rounded-lg transition ${
                 tab === "create"
-                  ? "bg-gradient-to-r from-rose-600 to-sky-600 text-white shadow"
+                  ? "bg-[#e31b23] text-white shadow-lg shadow-rose-950/60"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -326,9 +326,9 @@ export default function Lobby({
             <button
               type="button"
               onClick={() => setTab("join")}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+              className={`flex-1 py-2.5 text-sm font-['Bebas_Neue'] tracking-wider rounded-lg transition ${
                 tab === "join"
-                  ? "bg-gradient-to-r from-sky-600 to-purple-600 text-white shadow"
+                  ? "bg-[#e31b23] text-white shadow-lg shadow-rose-950/60"
                   : "text-slate-400 hover:text-white"
               }`}
             >
@@ -341,43 +341,43 @@ export default function Lobby({
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Code Challenge
+                  <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d] text-sm">
+                    SELECT CHALLENGE BASE
                   </label>
                   
                   {/* AI Generator Button */}
                   <button
                     type="button"
                     onClick={() => setShowAiModal(true)}
-                    className="text-[11px] font-bold text-fuchsia-400 hover:text-fuchsia-300 flex items-center space-x-1 bg-fuchsia-950/50 hover:bg-fuchsia-950 border border-fuchsia-800/80 px-2 py-0.5 rounded-lg transition shadow-sm"
+                    className="text-[11px] font-mono font-bold text-[#fcd34d] hover:text-white flex items-center space-x-1 bg-[#1a0f0f] hover:bg-[#250207] border border-[#d97706] px-2.5 py-1 rounded-lg transition shadow-sm"
                   >
-                    <Wand2 className="h-3 w-3" />
-                    <span>✨ AI Prompt Challenge</span>
+                    <Wand2 className="h-3 w-3 text-[#e31b23]" />
+                    <span>✨ AI PROMPT GENERATOR</span>
                   </button>
                 </div>
 
                 <select
                   value={selectedChallengeId}
                   onChange={(e) => setSelectedChallengeId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-medium focus:outline-none focus:border-sky-500"
+                  className="w-full px-4 py-3 rounded-xl bg-black border-2 border-[#2d1215] text-white focus:outline-none focus:border-[#e31b23] text-sm font-bold"
                 >
-                  {challengesList.map((ch) => (
-                    <option key={ch.id} value={ch.id}>
-                      {ch.title} ({ch.difficulty} • {ch.bugsCount} Bugs)
+                  {challengesList.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-black text-white">
+                      {c.title} ({c.difficulty} • {c.language?.toUpperCase() || "JS"})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Match Timer
+                  <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d] block mb-1">
+                    TIME LIMIT (MIN)
                   </label>
                   <select
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black border-2 border-[#2d1215] text-white focus:outline-none focus:border-[#e31b23] text-sm font-bold"
                   >
                     <option value={5}>5 Minutes (Blitz)</option>
                     <option value={10}>10 Minutes (Standard)</option>
@@ -386,13 +386,13 @@ export default function Lobby({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Mafia Saboteurs
+                  <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d] block mb-1">
+                    MAFIA RATIO
                   </label>
                   <select
                     value={mafiaCount}
                     onChange={(e) => setMafiaCount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black border-2 border-[#2d1215] text-white focus:outline-none focus:border-[#e31b23] text-sm font-bold"
                   >
                     <option value={1}>1 Secret Mafia</option>
                     <option value={2}>2 Secret Mafia</option>
@@ -402,11 +402,11 @@ export default function Lobby({
 
               <button
                 type="submit"
-                disabled={!nickname.trim() || isConnecting}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-600 via-fuchsia-600 to-sky-600 hover:from-rose-500 hover:to-sky-500 text-white font-extrabold text-sm shadow-xl shadow-rose-600/25 transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2"
+                disabled={isConnecting || !nickname.trim()}
+                className="w-full py-3.5 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-white font-['Bebas_Neue'] tracking-wider text-xl shadow-2xl shadow-rose-950/80 transition active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2 border border-red-400"
               >
-                <Plus className="h-4 w-4" />
-                <span>CREATE MISSION LOBBY</span>
+                <span>{isConnecting ? "CREATING CAMP..." : "ESTABLISH CAMP (HOST)"}</span>
+                <ArrowRight className="h-5 w-5" />
               </button>
             </form>
           )}
@@ -415,155 +415,129 @@ export default function Lobby({
           {tab === "join" && (
             <form onSubmit={handleJoin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  6-Letter Room Code
+                <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d] text-sm block mb-1">
+                  6-DIGIT ROOM PASSCODE
                 </label>
                 <input
                   type="text"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. CM-8492"
+                  placeholder="e.g. X7K92P"
                   maxLength={10}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono tracking-widest text-center text-base uppercase font-bold"
+                  className="w-full px-4 py-3 rounded-xl bg-black border-2 border-[#2d1215] text-[#fcd34d] placeholder-slate-600 focus:outline-none focus:border-[#e31b23] text-lg font-mono font-black tracking-widest uppercase transition shadow-inner"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={!nickname.trim() || !joinCode.trim() || isConnecting}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-extrabold text-sm shadow-xl shadow-sky-600/25 transition active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2"
+                disabled={isConnecting || !nickname.trim() || !joinCode.trim()}
+                className="w-full py-3.5 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-white font-['Bebas_Neue'] tracking-wider text-xl shadow-2xl shadow-rose-950/80 transition active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2 border border-red-400"
               >
-                <ArrowRight className="h-4 w-4" />
-                <span>JOIN SQUAD</span>
+                <span>{isConnecting ? "CONNECTING..." : "ENTER MATCH ARENA"}</span>
+                <ArrowRight className="h-5 w-5" />
               </button>
             </form>
           )}
         </div>
       </div>
 
-      {/* AI Challenge Generator Modal */}
+      {/* AI Prompt Challenge Modal */}
       {showAiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-          <div className="relative max-w-lg w-full glass-card rounded-2xl p-6 border border-fuchsia-700/60 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center space-x-2.5">
-                <div className="h-9 w-9 rounded-xl bg-fuchsia-950 border border-fuchsia-600 flex items-center justify-center text-fuchsia-400">
-                  <Wand2 className="h-5 w-5 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-white font-display">
-                    AI CODE CHALLENGE GENERATOR
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Type a prompt to auto-generate code with deliberate bugs & unit test suite
-                  </p>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+          <div className="relative max-w-lg w-full rounded-2xl p-6 sm:p-8 bg-[#0a0607] border-2 border-[#e31b23] shadow-2xl shadow-rose-950/80 space-y-5">
+            <div className="flex items-center justify-between border-b border-[#2d1215] pb-3">
+              <div className="flex items-center space-x-2">
+                <Wand2 className="h-5 w-5 text-[#e31b23]" />
+                <h3 className="font-['Bebas_Neue'] tracking-wider text-2xl text-white">AI MULTI-LANGUAGE GENERATOR</h3>
               </div>
-              <button
-                onClick={() => setShowAiModal(false)}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
+              <button onClick={() => setShowAiModal(false)} className="text-slate-400 hover:text-white">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Language Selector Pills */}
+            {/* Language Selector */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
-                Target Language & Architecture:
-              </span>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d]">SELECT PROGRAMMING LANGUAGE</label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {[
-                  { id: "python", label: "Python", icon: "🐍" },
-                  { id: "sql", label: "SQL", icon: "🗄️" },
-                  { id: "javascript", label: "JavaScript", icon: "⚡" },
-                  { id: "typescript", label: "TypeScript", icon: "🔷" },
-                  { id: "cpp", label: "C++", icon: "⚙️" },
-                  { id: "java", label: "Java", icon: "☕" }
-                ].map((lang) => (
+                  { id: "python", label: "Python", ext: ".py" },
+                  { id: "sql", label: "SQL", ext: ".sql" },
+                  { id: "javascript", label: "JS", ext: ".js" },
+                  { id: "typescript", label: "TS", ext: ".ts" },
+                  { id: "cpp", label: "C++", ext: ".cpp" },
+                  { id: "java", label: "Java", ext: ".java" }
+                ].map(lang => (
                   <button
                     key={lang.id}
                     type="button"
                     onClick={() => setSelectedAiLanguage(lang.id)}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center space-x-1 border transition ${
+                    className={`py-2 px-1.5 rounded-lg text-xs font-mono font-bold transition border-2 text-center ${
                       selectedAiLanguage === lang.id
-                        ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-200 shadow-md shadow-fuchsia-950/50 scale-[1.02]'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        ? "bg-[#e31b23] border-red-400 text-white shadow-lg shadow-rose-950/60"
+                        : "bg-black border-[#2d1215] text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span>{lang.icon}</span>
-                    <span>{lang.label}</span>
+                    <div>{lang.label}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Prompt Input */}
-            <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-['Bebas_Neue'] tracking-widest text-[#fcd34d]">DESCRIBE CHALLENGE</label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder={`Describe your multi-file ${selectedAiLanguage.toUpperCase()} project (e.g. 'Warehouse Inventory mutex with 3 files' or 'SQL database report with refunds')...`}
+                placeholder="e.g. Build a SQL transaction ledger with account balance audit verification..."
                 rows={3}
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-fuchsia-500"
+                className="w-full px-4 py-3 rounded-xl bg-black border-2 border-[#2d1215] text-white placeholder-slate-600 focus:outline-none focus:border-[#e31b23] text-xs font-mono leading-relaxed"
               />
-
-              {/* Quick Prompt Suggestion Pills */}
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1.5">
-                  Quick Ideas for {selectedAiLanguage.toUpperCase()}:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {(selectedAiLanguage === "sql" ? [
-                    "🗄️ E-Commerce Monthly Revenue & Refund Queries",
-                    "📊 High-Velocity Fraud Detection Table Pipeline",
-                    "⚡ Multi-Index Join Optimizer with Anomalies"
-                  ] : selectedAiLanguage === "python" ? [
-                    "🐍 Warehouse Inventory Mutex & Order Lock",
-                    "📦 Async Queue Pipeline with Deadlock Bug",
-                    "💳 Bank Ledger Nonce & Overdraft Validator"
-                  ] : PROMPT_SUGGESTIONS).map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setAiPrompt(sug);
-                        handleGenerateAiChallenge(sug, selectedAiLanguage);
-                      }}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-fuchsia-600/80 text-slate-300 hover:text-fuchsia-300 transition"
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {aiSuccessMessage && (
-                <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs font-mono font-bold flex items-center space-x-2 animate-bounce">
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  <span>{aiSuccessMessage}</span>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => handleGenerateAiChallenge()}
-                disabled={!aiPrompt.trim() || isGeneratingAi}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-sky-600 hover:from-fuchsia-500 hover:to-sky-500 text-white font-extrabold text-xs shadow-xl shadow-fuchsia-600/30 transition disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {isGeneratingAi ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>SYNTHESIZING 2-3 MODULAR FILES & TEST SUITE...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    <span>GENERATE {selectedAiLanguage.toUpperCase()} MULTI-FILE PROJECT</span>
-                  </>
-                )}
-              </button>
             </div>
+
+            {/* Preset Suggestions */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">QUICK PRESETS</span>
+              <div className="flex flex-wrap gap-1.5">
+                {PROMPT_SUGGESTIONS.map((sug, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setAiPrompt(sug.substring(2))}
+                    className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-black border border-[#2d1215] hover:border-[#e31b23] text-slate-300 hover:text-white transition"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Success Message */}
+            {aiSuccessMessage && (
+              <div className="p-3 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-300 text-xs font-bold font-mono">
+                {aiSuccessMessage}
+              </div>
+            )}
+
+            {/* Generate Action */}
+            <button
+              type="button"
+              onClick={() => handleGenerateAiChallenge()}
+              disabled={isGeneratingAi || !aiPrompt.trim()}
+              className="w-full py-3.5 rounded-xl bg-[#e31b23] hover:bg-[#c9181f] text-white font-['Bebas_Neue'] tracking-wider text-xl shadow-xl shadow-rose-950/80 transition active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2 border border-red-400"
+            >
+              {isGeneratingAi ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>SYNTHESIZING 2-3 MODULAR FILES...</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-5 w-5" />
+                  <span>GENERATE {selectedAiLanguage.toUpperCase()} MULTI-FILE PROJECT</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
