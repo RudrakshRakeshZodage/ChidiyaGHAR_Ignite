@@ -68,22 +68,20 @@ export default function App() {
   const typerTimeoutRef = useRef(null);
   const lastTypingEmitRef = useRef(0);
 
-  // Voice Service Event Listeners
+  // Keep refs for current player and room to avoid re-subscribing socket listeners
+  const playerRef = useRef(player);
+  playerRef.current = player;
+  const roomRef = useRef(room);
+  roomRef.current = room;
+
+  // Voice Service Event Listeners (Registered once on mount)
   useEffect(() => {
     const handleMuteChange = (muted) => {
       setIsVoiceMuted(muted);
-      const socket = socketService.getSocket();
-      if (socket && socket.connected) {
-        socket.emit("voice:state_change", { isMuted: muted, isSpeaking: !muted && isVoiceSpeaking });
-      }
     };
 
     const handleSpeakingChange = (speaking) => {
       setIsVoiceSpeaking(speaking);
-      const socket = socketService.getSocket();
-      if (socket && socket.connected) {
-        socket.emit("voice:state_change", { isMuted: isVoiceMuted, isSpeaking: speaking });
-      }
     };
 
     voiceService.on("mute:change", handleMuteChange);
@@ -93,7 +91,7 @@ export default function App() {
       voiceService.off("mute:change", handleMuteChange);
       voiceService.off("speaking:change", handleSpeakingChange);
     };
-  }, [isVoiceMuted, isVoiceSpeaking]);
+  }, []);
 
   // Initialize socket on mount
   useEffect(() => {
@@ -181,7 +179,7 @@ export default function App() {
 
       // Peer Voice Speaking Indicator
       socket.on("voice:peer_state", ({ playerId, isMuted: peerMuted, isSpeaking: peerSpeaking }) => {
-        const peerName = room?.players?.[playerId]?.name;
+        const peerName = roomRef.current?.players?.[playerId]?.name;
         if (!peerName) return;
 
         if (peerSpeaking && !peerMuted) {
@@ -210,7 +208,7 @@ export default function App() {
           setMafiaCluesUnlockedCount(unlockedCount || 1);
 
           // Pop up mystery modal for developers
-          if (player?.role !== "MAFIA") {
+          if (playerRef.current?.role !== "MAFIA") {
             setActiveMysteryModalClue(newlyUnlocked[0]);
           }
         }
@@ -274,6 +272,7 @@ export default function App() {
     return () => {
       if (socket) {
         socket.off("room:updated");
+        socket.off("mafia:screen_update");
         socket.off("code:sync");
         socket.off("game:phase_change");
         socket.off("game:phase_tick");
@@ -290,18 +289,31 @@ export default function App() {
       }
       if (typerTimeoutRef.current) clearTimeout(typerTimeoutRef.current);
     };
-  }, [player?.role, room?.players]);
+  }, []);
 
   // Sync current player state from room & voice session
   useEffect(() => {
     if (room && player) {
       voiceService.setSession(room.code, player.id);
-      const updatedMe = room.players[player.id];
+      const updatedMe = room.players?.[player.id];
       if (updatedMe) {
-        setPlayer(prev => ({ ...prev, ...updatedMe }));
+        setPlayer(prev => {
+          if (!prev) return updatedMe;
+          if (
+            prev.role === updatedMe.role &&
+            prev.isAlive === updatedMe.isAlive &&
+            prev.isReady === updatedMe.isReady &&
+            prev.isHost === updatedMe.isHost &&
+            prev.avatar === updatedMe.avatar &&
+            prev.name === updatedMe.name
+          ) {
+            return prev;
+          }
+          return { ...prev, ...updatedMe };
+        });
       }
     }
-  }, [room, player?.id]);
+  }, [room?.players, player?.id]);
 
   // Handle Voice Toggle
   const handleToggleVoiceMute = async () => {
@@ -918,7 +930,15 @@ export default function App() {
                       unlockedClues={unlockedMysteryClues}
                       totalCluesCount={totalMysteryCluesCount}
                       player={player}
+                      room={room}
                       mafiaCluesUnlockedCount={mafiaCluesUnlockedCount}
+                      onCallMeeting={handleCallMeeting}
+                      onSelectSuspect={(suspect) => {
+                        setSelectedSuspectId(suspect.id);
+                        if (player?.role === "MAFIA" && suspect.id !== player.id) {
+                          setShowSurveillanceModal(true);
+                        }
+                      }}
                     />
                   )}
 
