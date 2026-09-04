@@ -57,6 +57,7 @@ class HorrorAmbienceService {
       this.startWhisperFormantEngine();
       this.startHeartbeatPulse();
       this.startDissonantPads();
+      this.startCreepySpokenWhispers();
       this.notifyListeners();
     } catch (err) {
       console.warn("[Horror Ambience] Error starting ambience:", err);
@@ -70,50 +71,57 @@ class HorrorAmbienceService {
     if (!this.audioCtx || !this.masterGain) return;
 
     const droneGain = this.audioCtx.createGain();
-    droneGain.gain.setValueAtTime(0.22, this.audioCtx.currentTime);
+    droneGain.gain.setValueAtTime(0.32, this.audioCtx.currentTime);
 
     const filter = this.audioCtx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(90, this.audioCtx.currentTime);
+    filter.frequency.setValueAtTime(110, this.audioCtx.currentTime);
 
     // Left oscillator (48Hz)
     const osc1 = this.audioCtx.createOscillator();
     osc1.type = "sawtooth";
-    osc1.frequency.setValueAtTime(48, this.audioCtx.currentTime);
+    osc1.frequency.setValueAtTime(46, this.audioCtx.currentTime);
 
-    // Right oscillator (49.5Hz - creates 1.5Hz binaural pulsation)
+    // Right oscillator (47.5Hz - creates binaural beating tension)
     const osc2 = this.audioCtx.createOscillator();
     osc2.type = "sine";
-    osc2.frequency.setValueAtTime(49.5, this.audioCtx.currentTime);
+    osc2.frequency.setValueAtTime(47.5, this.audioCtx.currentTime);
+
+    // Low rumble undertone
+    const osc3 = this.audioCtx.createOscillator();
+    osc3.type = "triangle";
+    osc3.frequency.setValueAtTime(32, this.audioCtx.currentTime);
 
     // Slow LFO filter sweep
     const lfo = this.audioCtx.createOscillator();
     const lfoGain = this.audioCtx.createGain();
-    lfo.frequency.setValueAtTime(0.1, this.audioCtx.currentTime); // 10s period
-    lfoGain.gain.setValueAtTime(30, this.audioCtx.currentTime);
+    lfo.frequency.setValueAtTime(0.08, this.audioCtx.currentTime); // 12s slow breathing cycle
+    lfoGain.gain.setValueAtTime(45, this.audioCtx.currentTime);
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
     lfo.start();
 
     osc1.connect(filter);
     osc2.connect(filter);
+    osc3.connect(filter);
     filter.connect(droneGain);
     droneGain.connect(this.masterGain);
 
     osc1.start();
     osc2.start();
+    osc3.start();
 
-    this.nodes.push(osc1, osc2, lfo, droneGain, filter, lfoGain);
+    this.nodes.push(osc1, osc2, osc3, lfo, droneGain, filter, lfoGain);
   }
 
   /**
-   * Layer 2: Formant-Filtered Noise simulating continuous indistinct human whispers
+   * Layer 2: Formant-Filtered Noise simulating continuous indistinct demonic human whispers
    */
   startWhisperFormantEngine() {
     if (!this.audioCtx || !this.masterGain) return;
 
-    // Generate Pink/Brown Noise Buffer (5 seconds looped)
-    const bufferSize = this.audioCtx.sampleRate * 5;
+    // Generate Pink/Brown Noise Buffer (6 seconds looped)
+    const bufferSize = this.audioCtx.sampleRate * 6;
     const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
@@ -126,7 +134,7 @@ class HorrorAmbienceService {
       b3 = 0.86650 * b3 + white * 0.3104856;
       b4 = 0.55000 * b4 + white * 0.5329522;
       b5 = -0.7616 * b5 - white * 0.0168980;
-      output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+      output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.06;
       b6 = white * 0.115926;
     }
 
@@ -134,62 +142,69 @@ class HorrorAmbienceService {
     noiseSource.buffer = noiseBuffer;
     noiseSource.loop = true;
 
-    // Vocal Formant Bandpass Filters (/u/, /o/, /a/ vowel resonances)
-    // F1: ~350Hz, F2: ~800Hz, F3: ~2200Hz
+    // 3 Human Vocal Formant Bandpass Filters (throat resonance /u/, /o/, /a/)
     const formant1 = this.audioCtx.createBiquadFilter();
     formant1.type = "bandpass";
-    formant1.frequency.setValueAtTime(380, this.audioCtx.currentTime);
-    formant1.Q.setValueAtTime(4.5, this.audioCtx.currentTime);
+    formant1.frequency.setValueAtTime(360, this.audioCtx.currentTime);
+    formant1.Q.setValueAtTime(5.5, this.audioCtx.currentTime);
 
     const formant2 = this.audioCtx.createBiquadFilter();
     formant2.type = "bandpass";
-    formant2.frequency.setValueAtTime(950, this.audioCtx.currentTime);
-    formant2.Q.setValueAtTime(5.0, this.audioCtx.currentTime);
+    formant2.frequency.setValueAtTime(980, this.audioCtx.currentTime);
+    formant2.Q.setValueAtTime(6.0, this.audioCtx.currentTime);
+
+    const formant3 = this.audioCtx.createBiquadFilter();
+    formant3.type = "bandpass";
+    formant3.frequency.setValueAtTime(2400, this.audioCtx.currentTime);
+    formant3.Q.setValueAtTime(4.0, this.audioCtx.currentTime);
 
     const whisperGain = this.audioCtx.createGain();
-    whisperGain.gain.setValueAtTime(0.18, this.audioCtx.currentTime);
+    whisperGain.gain.setValueAtTime(0.38, this.audioCtx.currentTime);
 
-    // Dynamic slow whispering flutter
+    // Dynamic slow whispering breath modulator
     const flutterLfo = this.audioCtx.createOscillator();
     const flutterGain = this.audioCtx.createGain();
-    flutterLfo.frequency.setValueAtTime(0.35, this.audioCtx.currentTime); // Whispering breath cadence
-    flutterGain.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
+    flutterLfo.frequency.setValueAtTime(0.28, this.audioCtx.currentTime); // Whispering breath cadence
+    flutterGain.gain.setValueAtTime(0.16, this.audioCtx.currentTime);
     flutterLfo.connect(flutterGain);
     flutterGain.connect(whisperGain.gain);
     flutterLfo.start();
 
     noiseSource.connect(formant1);
     noiseSource.connect(formant2);
+    noiseSource.connect(formant3);
     formant1.connect(whisperGain);
     formant2.connect(whisperGain);
+    formant3.connect(whisperGain);
     whisperGain.connect(this.masterGain);
 
     noiseSource.start();
 
-    this.nodes.push(noiseSource, formant1, formant2, whisperGain, flutterLfo, flutterGain);
+    this.nodes.push(noiseSource, formant1, formant2, formant3, whisperGain, flutterLfo, flutterGain);
 
-    // Periodically shift vowel formants to simulate multiple whispering entities
+    // Periodically shift vowel formants to simulate whispering chorus of shadows
     const formantsList = [
-      [300, 850],
-      [450, 1100],
-      [350, 700],
-      [500, 1300],
-      [280, 600]
+      [280, 850, 2200],
+      [420, 1150, 2600],
+      [340, 720, 1950],
+      [520, 1350, 2800],
+      [250, 620, 1800]
     ];
 
     let formantIdx = 0;
     this.whisperInterval = setInterval(() => {
       if (!this.audioCtx || !this.isPlaying) return;
       formantIdx = (formantIdx + 1) % formantsList.length;
-      const [f1, f2] = formantsList[formantIdx];
+      const [f1, f2, f3] = formantsList[formantIdx];
       const now = this.audioCtx.currentTime;
-      formant1.frequency.setTargetAtTime(f1, now, 2.0);
-      formant2.frequency.setTargetAtTime(f2, now, 2.0);
-    }, 4500);
+      formant1.frequency.setTargetAtTime(f1, now, 1.8);
+      formant2.frequency.setTargetAtTime(f2, now, 1.8);
+      formant3.frequency.setTargetAtTime(f3, now, 1.8);
+    }, 3800);
   }
 
   /**
-   * Layer 3: Subtle Sub-Bass Heartbeat Pulse (~56 BPM)
+   * Layer 3: Menacing Sub-Bass Heartbeat Pulse (~52 BPM)
    */
   startHeartbeatPulse() {
     if (!this.audioCtx || !this.masterGain) return;
@@ -199,49 +214,49 @@ class HorrorAmbienceService {
       const now = this.audioCtx.currentTime;
 
       // Double beat: lub-dub
-      [0, 0.22].forEach((offset, idx) => {
+      [0, 0.24].forEach((offset, idx) => {
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
         const filter = this.audioCtx.createBiquadFilter();
 
         filter.type = "lowpass";
-        filter.frequency.setValueAtTime(80, now + offset);
+        filter.frequency.setValueAtTime(85, now + offset);
 
         osc.type = "sine";
-        osc.frequency.setValueAtTime(idx === 0 ? 58 : 52, now + offset);
-        osc.frequency.exponentialRampToValueAtTime(35, now + offset + 0.18);
+        osc.frequency.setValueAtTime(idx === 0 ? 56 : 48, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(32, now + offset + 0.22);
 
         gain.gain.setValueAtTime(0, now + offset);
-        gain.gain.linearRampToValueAtTime(idx === 0 ? 0.25 : 0.18, now + offset + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.25);
+        gain.gain.linearRampToValueAtTime(idx === 0 ? 0.35 : 0.24, now + offset + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.3);
 
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(this.masterGain);
 
         osc.start(now + offset);
-        osc.stop(now + offset + 0.3);
+        osc.stop(now + offset + 0.35);
       });
     };
 
-    // Trigger heartbeat every ~1.1 seconds (~55 BPM)
+    // Trigger heartbeat every ~1.15 seconds
     this.heartbeatInterval = setInterval(playThump, 1150);
   }
 
   /**
-   * Layer 4: Soft Dissonant Chords (Tritone / Minor Second Horror Pad)
+   * Layer 4: Soft Dissonant Horror Pad (Tritone / Diabolus in Musica)
    */
   startDissonantPads() {
     if (!this.audioCtx || !this.masterGain) return;
 
-    // C2 (65.4Hz) + F#2 (92.5Hz - Tritone / Diabolus in Musica) + C#3 (138.6Hz)
+    // C2 (65.4Hz) + F#2 (92.5Hz - Tritone) + C#3 (138.6Hz)
     const freqs = [65.4, 92.5, 138.6];
     const padGain = this.audioCtx.createGain();
-    padGain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
+    padGain.gain.setValueAtTime(0.10, this.audioCtx.currentTime);
 
     const padFilter = this.audioCtx.createBiquadFilter();
     padFilter.type = "lowpass";
-    padFilter.frequency.setValueAtTime(220, this.audioCtx.currentTime);
+    padFilter.frequency.setValueAtTime(260, this.audioCtx.currentTime);
 
     freqs.forEach(freq => {
       const osc = this.audioCtx.createOscillator();
@@ -255,6 +270,59 @@ class HorrorAmbienceService {
     padFilter.connect(padGain);
     padGain.connect(this.masterGain);
     this.nodes.push(padFilter, padGain);
+  }
+
+  /**
+   * Layer 5: Big Horrific Haunting Spoken Whispers (Voice Synthesis)
+   */
+  startCreepySpokenWhispers() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    const phrases = [
+      "Who among us is the saboteur...?",
+      "The tests are failing...",
+      "Do not trust them...",
+      "Someone is watching your code...",
+      "A regression was committed...",
+      "Look closer at the line numbers...",
+      "Find the liar before the timer expires...",
+      "There is a ghost in the motherboard...",
+      "They are pretending to debug...",
+      "One of us is a traitor...",
+      "Listen to the shadows...",
+      "They know what you did in production...",
+      "Every line you write is poisoned...",
+      "There will be blood in the pull request...",
+      "The saboteur is sitting right beside you..."
+    ];
+
+    const speakWhisper = () => {
+      if (this.isMuted || !this.isPlaying) return;
+      try {
+        const text = phrases[Math.floor(Math.random() * phrases.length)];
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.72; // Slow, deliberate horrific whisper
+        utterance.pitch = 0.30; // Deep, raspy demonic pitch
+        utterance.volume = Math.min(0.85, Math.max(0.45, this.volume * 1.5)); // Big, clearly audible horror voice
+
+        // Pick deep English voices if available
+        const voices = window.speechSynthesis.getVoices();
+        const whisperVoice = voices.find(v => 
+          v.lang.startsWith("en") && 
+          (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("David") || v.name.includes("Male") || v.name.includes("Zira"))
+        ) || voices[0];
+        
+        if (whisperVoice) utterance.voice = whisperVoice;
+
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        // Speech synthesis optional
+      }
+    };
+
+    // First big whisper triggers quickly after 2.5s, then every ~15 seconds
+    setTimeout(speakWhisper, 2500);
+    this.spokenWhisperInterval = setInterval(speakWhisper, 15000);
   }
 
   /**
@@ -298,8 +366,10 @@ class HorrorAmbienceService {
   stop() {
     if (this.whisperInterval) clearInterval(this.whisperInterval);
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (this.spokenWhisperInterval) clearInterval(this.spokenWhisperInterval);
     this.whisperInterval = null;
     this.heartbeatInterval = null;
+    this.spokenWhisperInterval = null;
 
     this.nodes.forEach(node => {
       try {
