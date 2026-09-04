@@ -76,16 +76,16 @@ export function createApiRouter(roomManager) {
     res.json(list);
   });
 
-  // Generate Custom AI Challenge by Prompt
+  // Generate Custom AI Challenge by Prompt & Language
   router.post("/api/challenges/generate", async (req, res) => {
-    const { prompt } = req.body || {};
-    const result = await generateAiChallenge(prompt);
+    const { prompt, language } = req.body || {};
+    const result = await generateAiChallenge(prompt, language);
     res.json(result);
   });
 
   router.post("/challenges/generate", async (req, res) => {
-    const { prompt } = req.body || {};
-    const result = await generateAiChallenge(prompt);
+    const { prompt, language } = req.body || {};
+    const result = await generateAiChallenge(prompt, language);
     res.json(result);
   });
 

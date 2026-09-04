@@ -46,6 +46,7 @@ export default function Lobby({
   // AI Prompt Challenge Generator State
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [selectedAiLanguage, setSelectedAiLanguage] = useState("python");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiSuccessMessage, setAiSuccessMessage] = useState(null);
 
@@ -53,8 +54,9 @@ export default function Lobby({
     return import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_BACKEND_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin);
   };
 
-  const handleGenerateAiChallenge = async (customPrompt) => {
+  const handleGenerateAiChallenge = async (customPrompt, customLang) => {
     const promptToUse = customPrompt || aiPrompt;
+    const langToUse = customLang || selectedAiLanguage;
     if (!promptToUse.trim()) return;
 
     setIsGeneratingAi(true);
@@ -63,7 +65,7 @@ export default function Lobby({
       const res = await fetch(`${backendUrl}/api/challenges/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptToUse.trim() })
+        body: JSON.stringify({ prompt: promptToUse.trim(), language: langToUse })
       });
 
       if (res.ok) {
@@ -71,11 +73,12 @@ export default function Lobby({
         if (data.success && data.challenge) {
           setChallengesList(prev => [data.challenge, ...prev]);
           setSelectedChallengeId(data.challenge.id);
-          setAiSuccessMessage(`✨ Created "${data.challenge.title}" with ${data.challenge.testSuite?.length || 3} tests!`);
+          const fileCount = data.challenge.files ? Object.keys(data.challenge.files).length : 2;
+          setAiSuccessMessage(`✨ Created ${fileCount}-file ${langToUse.toUpperCase()} project: "${data.challenge.title}"!`);
           setTimeout(() => {
             setShowAiModal(false);
             setAiSuccessMessage(null);
-          }, 1400);
+          }, 1500);
         }
       }
     } catch (err) {
@@ -464,12 +467,43 @@ export default function Lobby({
               </button>
             </div>
 
+            {/* Language Selector Pills */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">
+                Target Language & Architecture:
+              </span>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {[
+                  { id: "python", label: "Python", icon: "🐍" },
+                  { id: "sql", label: "SQL", icon: "🗄️" },
+                  { id: "javascript", label: "JavaScript", icon: "⚡" },
+                  { id: "typescript", label: "TypeScript", icon: "🔷" },
+                  { id: "cpp", label: "C++", icon: "⚙️" },
+                  { id: "java", label: "Java", icon: "☕" }
+                ].map((lang) => (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => setSelectedAiLanguage(lang.id)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center space-x-1 border transition ${
+                      selectedAiLanguage === lang.id
+                        ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-200 shadow-md shadow-fuchsia-950/50 scale-[1.02]'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{lang.icon}</span>
+                    <span>{lang.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Prompt Input */}
             <div className="space-y-3">
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Describe your coding challenge (e.g. 'Banking Ledger double-spending validator' or 'OAuth JWT Claims parser')..."
+                placeholder={`Describe your multi-file ${selectedAiLanguage.toUpperCase()} project (e.g. 'Warehouse Inventory mutex with 3 files' or 'SQL database report with refunds')...`}
                 rows={3}
                 className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-fuchsia-500"
               />
@@ -477,16 +511,24 @@ export default function Lobby({
               {/* Quick Prompt Suggestion Pills */}
               <div>
                 <span className="text-[10px] text-slate-500 uppercase font-bold block mb-1.5">
-                  Quick Ideas:
+                  Quick Ideas for {selectedAiLanguage.toUpperCase()}:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {PROMPT_SUGGESTIONS.map((sug, idx) => (
+                  {(selectedAiLanguage === "sql" ? [
+                    "🗄️ E-Commerce Monthly Revenue & Refund Queries",
+                    "📊 High-Velocity Fraud Detection Table Pipeline",
+                    "⚡ Multi-Index Join Optimizer with Anomalies"
+                  ] : selectedAiLanguage === "python" ? [
+                    "🐍 Warehouse Inventory Mutex & Order Lock",
+                    "📦 Async Queue Pipeline with Deadlock Bug",
+                    "💳 Bank Ledger Nonce & Overdraft Validator"
+                  ] : PROMPT_SUGGESTIONS).map((sug, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => {
                         setAiPrompt(sug);
-                        handleGenerateAiChallenge(sug);
+                        handleGenerateAiChallenge(sug, selectedAiLanguage);
                       }}
                       className="text-[10px] px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-fuchsia-600/80 text-slate-300 hover:text-fuchsia-300 transition"
                     >
@@ -512,12 +554,12 @@ export default function Lobby({
                 {isGeneratingAi ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>SYNTHESIZING CODE & TEST SUITE...</span>
+                    <span>SYNTHESIZING 2-3 MODULAR FILES & TEST SUITE...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    <span>GENERATE CHALLENGE NOW</span>
+                    <span>GENERATE {selectedAiLanguage.toUpperCase()} MULTI-FILE PROJECT</span>
                   </>
                 )}
               </button>

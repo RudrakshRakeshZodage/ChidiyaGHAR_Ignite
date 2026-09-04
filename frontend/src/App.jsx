@@ -800,6 +800,8 @@ export default function App() {
               <div className="lg:col-span-7 h-full min-h-[420px]">
                 <CodeEditor
                   code={code}
+                  files={room.challenge?.files}
+                  language={room.challenge?.language || "javascript"}
                   snapshotBeforeCode={snapshotBeforeCode}
                   onChange={handleCodeChange}
                   onReset={handleResetCode}
@@ -810,6 +812,8 @@ export default function App() {
                   readOnly={!player?.isAlive}
                   activeTypers={activeTypers}
                   onOpenSurveillance={() => setShowSurveillanceModal(true)}
+                  onRunTests={handleRunTests}
+                  testResults={testResults}
                 />
               </div>
 
