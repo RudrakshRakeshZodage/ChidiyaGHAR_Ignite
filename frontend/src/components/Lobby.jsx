@@ -47,8 +47,6 @@ export default function Lobby({
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [selectedAiLanguage, setSelectedAiLanguage] = useState("sql");
-  const [customAiKey, setCustomAiKey] = useState(() => localStorage.getItem("codemafia_openrouter_key") || localStorage.getItem("codemafia_ai_key") || "");
-  const [showKeySettings, setShowKeySettings] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiSuccessMessage, setAiSuccessMessage] = useState(null);
 
@@ -61,10 +59,6 @@ export default function Lobby({
     const langToUse = customLang || selectedAiLanguage;
     if (!promptToUse.trim()) return;
 
-    if (customAiKey.trim()) {
-      localStorage.setItem("codemafia_openrouter_key", customAiKey.trim());
-    }
-
     setIsGeneratingAi(true);
     try {
       const backendUrl = getBackendUrl();
@@ -73,9 +67,7 @@ export default function Lobby({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: promptToUse.trim(), 
-          language: langToUse,
-          apiKey: customAiKey.trim() || undefined,
-          provider: "openrouter"
+          language: langToUse
         })
       });
 
@@ -599,32 +591,6 @@ export default function Lobby({
               </div>
             </div>
 
-            {/* Optional AI Key Accordion */}
-            <div className="border border-[#2d1215] rounded-xl overflow-hidden bg-black/60">
-              <button
-                type="button"
-                onClick={() => setShowKeySettings(!showKeySettings)}
-                className="w-full px-3 py-2 text-left flex items-center justify-between text-[11px] font-mono text-slate-400 hover:text-white"
-              >
-                <span>🔑 Custom OpenRouter API Key (Optional)</span>
-                <span>{showKeySettings ? "▲" : "▼"}</span>
-              </button>
-
-              {showKeySettings && (
-                <div className="p-3 pt-1 space-y-2 border-t border-[#2d1215]">
-                  <input
-                    type="password"
-                    value={customAiKey}
-                    onChange={(e) => setCustomAiKey(e.target.value)}
-                    placeholder="OpenRouter Key (sk-or-v1-...)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-black border border-[#2d1215] text-white placeholder-slate-600 focus:outline-none focus:border-[#e31b23] text-xs font-mono"
-                  />
-                  <p className="text-[10px] text-slate-500 font-mono">
-                    Paste your OpenRouter key (<a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-[#e31b23] underline">openrouter.ai/keys</a>). Saved in browser localStorage.
-                  </p>
-                </div>
-              )}
-            </div>
 
             {/* Success Message */}
             {aiSuccessMessage && (

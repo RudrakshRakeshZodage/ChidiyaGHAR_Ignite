@@ -463,7 +463,7 @@ Return ONLY a valid JSON object matching this schema:
     {
       "id": "test-1",
       "name": "Description of test case",
-      "runCode": "Executable JS assertion code that tests the challenge functions and throws Error on failure"
+      "runCode": "Executable assertion code that checks test conditions and throws Error(\\"message\\") on failure."
     }
   ]
 }`;
