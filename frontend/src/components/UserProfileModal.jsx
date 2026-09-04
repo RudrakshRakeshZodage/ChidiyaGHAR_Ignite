@@ -433,20 +433,25 @@ export default function UserProfileModal({ isOpen, onClose, player, authUser }) 
         {/* Tab 4: Badges Showcase */}
         {activeTab === "badges" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto pr-1">
-            {badges.map((b, idx) => (
-              <div
-                key={b.id || idx}
-                className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center space-x-3.5"
-              >
-                <div className="h-11 w-11 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-xl shrink-0">
-                  {b.icon || "🎖️"}
+            {badges.map((b, idx) => {
+              const badgeName = typeof b === 'object' ? (b.name || b.id) : String(b);
+              const badgeDesc = typeof b === 'object' ? (b.desc || "Operative achievement unlocked") : "Achievement earned in Code Mafia missions";
+              const badgeIcon = typeof b === 'object' ? (b.icon || "🎖️") : "🎖️";
+              return (
+                <div
+                  key={b.id || idx}
+                  className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center space-x-3.5"
+                >
+                  <div className="h-11 w-11 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-xl shrink-0">
+                    {badgeIcon}
+                  </div>
+                  <div>
+                    <div className="font-bold text-xs text-slate-200">{badgeName}</div>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{badgeDesc}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-200">{b.name}</div>
-                  <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{b.desc}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

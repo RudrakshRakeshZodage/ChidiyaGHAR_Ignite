@@ -234,11 +234,12 @@ export default function LeaderboardModal({ isOpen, onClose, player, authUser, ro
                       <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-mono mt-0.5">
                         <span>{agent.matches} Matches</span>
                         <span>•</span>
-                        <span className="text-emerald-400">{agent.winRate} Win Rate</span>
                         {agent.badges?.[0] && (
                           <>
                             <span>•</span>
-                            <span className="text-amber-400 truncate">{agent.badges[0]}</span>
+                            <span className="text-amber-400 truncate">
+                              {typeof agent.badges[0] === 'object' ? (agent.badges[0]?.name || agent.badges[0]?.id) : String(agent.badges[0])}
+                            </span>
                           </>
                         )}
                       </div>
