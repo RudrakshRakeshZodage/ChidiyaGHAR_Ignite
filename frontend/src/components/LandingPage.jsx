@@ -7,6 +7,7 @@ import {
   ExternalLink, Mail
 } from 'lucide-react';
 import CatTarotCard, { CAT_TAROT_ARCHETYPES } from './CatTarotCard';
+import AmbienceAudioControl from './AmbienceAudioControl';
 
 export default function LandingPage({
   onEnterLobby,
@@ -105,7 +106,10 @@ export default function LandingPage({
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center space-x-5 text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+        <div className="flex items-center space-x-4 text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+          {/* Background Atmospheric Horror Sound Control */}
+          <AmbienceAudioControl />
+
           <button onClick={onOpenLeaderboard} className="hidden sm:flex items-center space-x-1 hover:text-white transition">
             <Search className="h-3.5 w-3.5" />
             <span>SEARCH</span>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Terminal, ShieldAlert, Copy, Check, Users, Clock, AlertTriangle, Trophy, LogOut, Flame } from 'lucide-react';
 import VoiceControls from './VoiceControls';
+import AmbienceAudioControl from './AmbienceAudioControl';
 
 export default function Navbar({
   room,
@@ -118,8 +119,11 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Right: Voice Mic + Leaderboard + Profile */}
-      <div className="flex items-center space-x-2.5">
+      {/* Right: Horror Ambience + Voice Mic + Leaderboard + Profile */}
+      <div className="flex items-center space-x-2">
+        {/* Background Atmospheric Horror Sound Engine Control */}
+        <AmbienceAudioControl />
+
         {/* Real-time Voice Chat Mic Toggle */}
         <VoiceControls
           isMuted={isMuted}
